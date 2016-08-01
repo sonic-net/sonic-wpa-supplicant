@@ -1,0 +1,17 @@
+[Unit]
+Description=QoS default initialization
+After=sonic-ip.service
+Wants=sonic-ip.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/sonic/sonic-environment
+ExecStart=/usr/bin/base_qos_init.sh
+RemainAfterExit=yes
+
+# Resource Limitations
+LimitNOFILE=16384
+
+[Install]
+WantedBy=multi-user.target

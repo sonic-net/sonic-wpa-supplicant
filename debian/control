@@ -1,0 +1,21 @@
+Source: libsonic-nas-qos
+Section: net
+Priority: optional
+Maintainer: Dell <support@dell.com>
+Build-Depends: debhelper (>= 9), autotools-dev,libsonic-common-dev,libsonic-object-library-dev,libsonic-logging-dev,libsonic-nas-common-dev,sonic-ndi-api-dev,libsonic-nas-ndi-dev,gtest-dev
+Standards-Version: 3.9.3
+
+Package: libsonic-nas-qos1
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends},libsonic-common1,sonic-object-library,libsonic-logging1,libsonic-nas-common1,libsonic-nas-ndi1
+Description: This package contains base QoS functionality for the SONiC software.
+
+Package: libsonic-nas-qos-dev
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends},libsonic-common-dev,libsonic-object-library-dev,libsonic-logging-dev,libsonic-nas-common-dev,sonic-ndi-api-dev,libsonic-nas-ndi-dev,libsonic-nas-qos1,libsonic-model-dev
+Description: This package contains base QoS functionality for the SONiC software.
+
+Package: sonic-nas-qos
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, sonic-object-library, python-sonic-object-library, sonic-nas-linux
+Description: This package contains base QoS functionality for the SONiC software.
