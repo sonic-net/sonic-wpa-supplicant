@@ -2,7 +2,7 @@ Source: libsonic-nas-qos
 Section: net
 Priority: optional
 Maintainer: Dell <support@dell.com>
-Build-Depends: debhelper (>= 9), autotools-dev,libsonic-common-dev,libsonic-object-library-dev,libsonic-logging-dev,libsonic-nas-common-dev,sonic-ndi-api-dev,libsonic-nas-ndi-dev,gtest-dev
+Build-Depends: debhelper (>= 9),dh-autoreconf,dh-systemd,autotools-dev,libsonic-common-dev,libsonic-object-library-dev,libsonic-logging-dev,libsonic-nas-common-dev,sonic-ndi-api-dev,libsonic-nas-ndi-dev,gtest-dev
 Standards-Version: 3.9.3
 
 Package: libsonic-nas-qos1
