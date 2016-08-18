@@ -14,7 +14,7 @@ Description: This package contains base QoS functionality for the SONiC software
 
 Package: libsonic-nas-qos-dev
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends},libsonic-common-dev,libsonic-object-library-dev,libsonic-logging-dev,libsonic-nas-common-dev,sonic-ndi-api-dev,libsonic-nas-ndi-dev,libsonic-nas-qos1,libsonic-model-dev
+Depends: ${shlibs:Depends}, ${misc:Depends},libsonic-common-dev,libsonic-object-library-dev,libsonic-logging-dev,libsonic-nas-common-dev,sonic-ndi-api-dev,libsonic-nas-ndi-dev,libsonic-nas-qos1 (=${binary:Version}),libsonic-model-dev
 Description: This package contains base QoS functionality for the SONiC software.
 
 Package: sonic-nas-qos
