@@ -3,7 +3,7 @@
 
 AC_PREREQ([2.69])
 AC_INIT([sonic-nas-qos], [1.0.1], [support@dell.com])
-AM_INIT_AUTOMAKE([foreign])
+AM_INIT_AUTOMAKE([foreign subdir-objects])
 AC_CONFIG_SRCDIR([.])
 AC_CONFIG_HEADERS([config.h])
 ACLOCAL_AMFLAGS=-I m4
