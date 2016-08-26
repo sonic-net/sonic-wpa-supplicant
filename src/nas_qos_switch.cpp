@@ -19,8 +19,6 @@
 /*!
  * \file   nas_qos_switch.cpp
  * \brief  NAS QOS Switch Object
- * \date   02-2015
- * \author
  */
 
 #include "std_assert.h"

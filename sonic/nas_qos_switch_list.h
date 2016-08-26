@@ -19,8 +19,6 @@
 /*!
  * \file   nas_qos_switch_list.h
  * \brief  API to cache the list of switches in the system
- * \date   02-2015
- * \author
  */
 
 #ifndef _NAS_QAS_SWITCH_LIST_H_

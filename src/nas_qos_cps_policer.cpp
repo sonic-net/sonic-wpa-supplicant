@@ -19,8 +19,6 @@
 /*!
  * \file   nas_qos_cps_policer.cpp
  * \brief  NAS qos policer related CPS API routines
- * \date   02-2015
- * \author
  */
 
 #include "cps_api_events.h"

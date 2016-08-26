@@ -19,8 +19,6 @@
 /*!
  * \file   nas_qos_buffer_profile.h
  * \brief  NAS QOS Buffer Profile object
- * \date   03-2016
- * \author
  */
 
 #ifndef _NAS_QOS_BUFFER_PROFILE_H_

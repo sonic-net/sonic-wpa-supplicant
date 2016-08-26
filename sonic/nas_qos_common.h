@@ -19,8 +19,6 @@
 /*!
  * \file   nas_qos_common.h
  * \brief  NAS QOS Common macros and typedefs
- * \date   02-2015
- * \author
  */
 
 #ifndef _NAS_QOS_COMMON_H_

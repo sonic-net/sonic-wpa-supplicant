@@ -19,8 +19,6 @@
 /*!
  * \file   nas_qos_buffer_pool.cpp
  * \brief  NAS QOS buffer_pool Object
- * \date   03-2016
- * \author
  */
 
 #include "event_log.h"

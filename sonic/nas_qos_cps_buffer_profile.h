@@ -19,8 +19,6 @@
 /*!
  * \file   nas_qos_cps_buffer_profile.h
  * \brief  NAS qos buffer_profile CPS API routines
- * \date   03-2016
- * \author
  */
 #ifndef _NAS_QOS_CPS_BUFFER_PROFILE_H_
 #define _NAS_QOS_CPS_BUFFER_PROFILE_H_

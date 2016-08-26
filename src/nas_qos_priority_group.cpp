@@ -19,8 +19,6 @@
 /*!
  * \file   nas_qos_priority_group.cpp
  * \brief  NAS QOS priority_group Object
- * \date   05-2015
- * \author
  */
 
 #include "event_log.h"

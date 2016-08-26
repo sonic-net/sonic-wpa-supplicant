@@ -19,8 +19,6 @@
 /*!
  * \file   nas_qos_scheduler.h
  * \brief  NAS QOS scheduler object
- * \date   05-2015
- * \author
  */
 
 #ifndef _NAS_QOS_SCHEDULER_H_

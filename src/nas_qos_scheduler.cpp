@@ -19,8 +19,6 @@
 /*!
  * \file   nas_qos_scheduler.cpp
  * \brief  NAS QOS Scheduler Object
- * \date   05-2015
- * \author
  */
 
 #include "event_log.h"

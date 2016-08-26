@@ -19,8 +19,6 @@
 /*!
  * \file   nas_qos_cps_buffer_pool.cpp
  * \brief  NAS qos buffer_pool related CPS API routines
- * \date   05-2016
- * \author
  */
 
 #include "cps_api_events.h"

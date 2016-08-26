@@ -19,8 +19,6 @@
 /*!
  * \file   nas_qos_map_entry.cpp
  * \brief  NAS QOS dot1p|dscp to tc/color map Object
- * \date   05-2015
- * \author
  */
 
 #include "event_log.h"

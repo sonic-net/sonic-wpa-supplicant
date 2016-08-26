@@ -19,8 +19,6 @@
 /*!
  * \file   nas_qos_queue.cpp
  * \brief  NAS QOS queue Object
- * \date   02-2015
- * \author
  */
 
 #include "event_log.h"

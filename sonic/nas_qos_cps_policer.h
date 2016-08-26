@@ -19,8 +19,6 @@
 /*!
  * \file   nas_qos_cps_policer.h
  * \brief  NAS qos policer CPS API routines
- * \date   02-2015
- * \author
  */
 #ifndef _NAS_QOS_CPS_POLICER_H_
 #define _NAS_QOS_CPS_POLICER_H_

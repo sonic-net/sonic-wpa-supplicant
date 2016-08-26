@@ -19,8 +19,6 @@
 /*!
  * \file   nas_qos_switch_list.cpp
  * \brief  Managing a cache within QoS module for the list of switches in the system
- * \date   02-2015
- * \author
  */
 
 #include <unordered_map>

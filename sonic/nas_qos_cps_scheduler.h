@@ -19,8 +19,6 @@
 /*!
  * \file   nas_qos_cps_scheduler.h
  * \brief  NAS qos scheduler CPS API routines
- * \date   02-2015
- * \author
  */
 #ifndef _NAS_QOS_CPS_SCHEDULER_H_
 #define _NAS_QOS_CPS_SCHEDULER_H_

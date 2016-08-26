@@ -19,8 +19,6 @@
 /*!
  * \file   nas_qos_priority_group.h
  * \brief  NAS QOS Priority Group object
- * \date   03-2016
- * \author
  */
 
 #ifndef _NAS_QOS_PRIORITY_GROUP_H_

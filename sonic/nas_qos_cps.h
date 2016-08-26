@@ -19,8 +19,6 @@
 /*!
  * \file   nas_qos_cps.h
  * \brief  NAS QOS CPS API prototypes
- * \date   02-2015
- * \author
  */
 
 #ifndef _NAS_QOS_CPS_H_

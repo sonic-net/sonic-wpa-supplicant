@@ -19,8 +19,6 @@
 /*!
  * \file   nas_qos_cps_port_ingress.h
  * \brief  NAS qos port ingress CPS API routines
- * \date   05-2015
- * \author
  */
 #ifndef _NAS_QOS_CPS_PORT_INGRESS_H_
 #define _NAS_QOS_CPS_PORT_INGRESS_H_
