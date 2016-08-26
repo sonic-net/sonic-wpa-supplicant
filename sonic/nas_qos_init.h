@@ -19,7 +19,6 @@
 /*!
  * \file   nas_qos_init.h
  * \brief  Exported header files
- * \date   05-2014
  */
 #ifndef __NAS_QOS_INIT_H__
 #define __NAS_QOS_INIT_H__

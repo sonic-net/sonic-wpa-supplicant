@@ -19,8 +19,6 @@
 /*!
  * \file   nas_qos_map_util.cpp
  * \brief  NAS QOS map util file for all map objects
- * \date   05-2015
- * \author
  */
 
 #include "nas_qos_map.h"

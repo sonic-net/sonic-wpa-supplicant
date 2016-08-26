@@ -19,8 +19,6 @@
 /*!
  * \file   nas_qos_wred.h
  * \brief  NAS QOS WRED object
- * \date   05-2015
- * \author
  */
 
 #ifndef _NAS_QOS_WRED_H_

@@ -19,8 +19,6 @@
 /*!
  * \file   nas_qos_wred.cpp
  * \brief  NAS QOS WRED Object
- * \date   05-2015
- * \author
  */
 
 #include "event_log.h"

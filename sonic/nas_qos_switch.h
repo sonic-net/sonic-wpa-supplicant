@@ -19,8 +19,6 @@
 /*!
  * \file   nas_qos_switch.h
  * \brief  NAS QOS Switch Object
- * \date   02-2015
- * \author
  */
 
 #ifndef _NAS_QOS_SWITCH_H_

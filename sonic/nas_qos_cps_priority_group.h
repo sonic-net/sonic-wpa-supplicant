@@ -19,8 +19,6 @@
 /*!
  * \file   nas_qos_cps_priority_group.h
  * \brief  NAS qos priority_group CPS API routines
- * \date   03-2016
- * \author
  */
 #ifndef _NAS_QOS_CPS_PRIORITY_GROUP_H_
 #define _NAS_QOS_CPS_PRIORITY_GROUP_H_

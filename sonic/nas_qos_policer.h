@@ -19,8 +19,6 @@
 /*!
  * \file   nas_qos_policer.h
  * \brief  NAS QOS policer (a.k.a. meter) object
- * \date   02-2015
- * \author
  */
 
 #ifndef _NAS_QOS_POLICER_H_

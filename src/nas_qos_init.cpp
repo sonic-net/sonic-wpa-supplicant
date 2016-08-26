@@ -19,8 +19,6 @@
 /*!
  * \file   nas_qos_init.cpp
  * \brief  NAS QOS Entry Point
- * \date   02-2015
- * \author
  */
 
 #include "event_log.h"

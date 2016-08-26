@@ -19,8 +19,6 @@
 /*!
  * \file   nas_qos_cps_wred.h
  * \brief  NAS qos wred CPS API routines
- * \date   05-2015
- * \author
  */
 #ifndef _NAS_QOS_CPS_WRED_H_
 #define _NAS_QOS_CPS_WRED_H_

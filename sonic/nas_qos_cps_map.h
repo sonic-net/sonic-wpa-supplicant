@@ -19,8 +19,6 @@
 /*!
  * \file   nas_qos_cps_map.h
  * \brief  NAS qos map CPS API routines
- * \date   02-2015
- * \author
  */
 #ifndef _NAS_QOS_CPS_MAP_H_
 #define _NAS_QOS_CPS_MAP_H_

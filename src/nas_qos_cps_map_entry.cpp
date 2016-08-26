@@ -19,8 +19,6 @@
 /*!
  * \file   nas_qos_cps_map_entry.cpp
  * \brief  CPS API routines for dot1p|dscp to tc/color maps
- * \date   02-2015
- * \author
  */
 
 #include "cps_api_events.h"

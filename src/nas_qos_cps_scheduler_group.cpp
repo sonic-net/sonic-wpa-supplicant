@@ -19,8 +19,6 @@
 /*!
  * \file   nas_qos_cps_scheduler_group.cpp
  * \brief  NAS qos scheduler_group related CPS API routines
- * \date   05-2015
- * \author
  */
 
 #include "cps_api_events.h"

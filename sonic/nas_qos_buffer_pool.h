@@ -19,8 +19,6 @@
 /*!
  * \file   nas_qos_buffer_pool.h
  * \brief  NAS QOS Buffer Pool object
- * \date   03-2016
- * \author
  */
 
 #ifndef _NAS_QOS_BUFFER_POOL_H_

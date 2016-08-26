@@ -19,8 +19,6 @@
 /*!
  * \file   nas_qos_map_util.h
  * \brief  NAS QOS map object
- * \date   05-2015
- * \author
  */
 
 #ifndef _NAS_QOS_MAP_UTIL_H_

@@ -19,8 +19,6 @@
 /*!
  * \file   nas_qos_cps_priority_group.cpp
  * \brief  NAS qos priority_group related CPS API routines
- * \date   05-2016
- * \author
  */
 
 #include "cps_api_events.h"

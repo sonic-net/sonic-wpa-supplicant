@@ -19,8 +19,6 @@
 /*!
  * \file   nas_qos_map.cpp
  * \brief  NAS QOS map Object
- * \date   05-2015
- * \author
  */
 
 #include "event_log.h"

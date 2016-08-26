@@ -19,8 +19,6 @@
 /*!
  * \file   nas_qos_map_entry.h
  * \brief  NAS QOS dot1p to tc and/or color map object
- * \date   05-2015
- * \author
  */
 
 #ifndef _NAS_QOS_MAP_ENTRY_H_

@@ -19,8 +19,6 @@
 /*!
  * \file   nas_qos_queue.h
  * \brief  NAS QOS queue object
- * \date   02-2015
- * \author
  */
 
 #ifndef _NAS_QOS_QUEUE_H_

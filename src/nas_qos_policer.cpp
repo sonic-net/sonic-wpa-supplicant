@@ -19,8 +19,6 @@
 /*!
  * \file   nas_qos_policer.cpp
  * \brief  NAS QOS Policer Object
- * \date   02-2015
- * \author
  */
 
 #include "event_log.h"
