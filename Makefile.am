@@ -11,7 +11,7 @@ libsonic_nas_qos_la_SOURCES=src/nas_qos_cps_map_entry.cpp src/nas_qos_policer.cp
 libsonic_nas_qos_la_CPPFLAGS=-D_FILE_OFFSET_BITS=64 -I$(top_srcdir)/sonic -I$(includedir)/sonic
 libsonic_nas_qos_la_CXXFLAGS=-std=c++11
 libsonic_nas_qos_la_LDFLAGS=-shared -version-info 1:1:0
-libsonic_nas_qos_la_LIBADD=-lsonic_logging -lsonic_nas_ndi -lsonic_nas_common -lsonic_object_library -lsonic_cps_class_map -lsonic_common
+libsonic_nas_qos_la_LIBADD=-lsonic_logging -lsonic_nas_ndi -lsonic_nas_common -lsonic_object_library -lsonic_common
 
 systemdconfdir=/lib/systemd/system
 systemdconf_DATA = scripts/init/*.service
