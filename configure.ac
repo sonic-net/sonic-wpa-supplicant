@@ -6,7 +6,6 @@ AC_INIT([sonic-nas-qos], [1.0.1], [sonicproject@gmail.com])
 AM_INIT_AUTOMAKE([foreign subdir-objects])
 AC_CONFIG_SRCDIR([.])
 AC_CONFIG_HEADERS([config.h])
-ACLOCAL_AMFLAGS=-I m4
 AC_CONFIG_MACRO_DIRS([m4])
 
 # Checks for programs.
