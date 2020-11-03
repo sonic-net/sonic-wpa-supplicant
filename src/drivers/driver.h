@@ -5763,6 +5763,10 @@ extern const struct wpa_driver_ops wpa_driver_macsec_qca_ops;
 /* driver_macsec_linux.c */
 extern const struct wpa_driver_ops wpa_driver_macsec_linux_ops;
 #endif /* CONFIG_DRIVER_MACSEC_LINUX */
+#ifdef CONFIG_DRIVER_MACSEC_SONIC
+/* driver_macsec_sonic.c */
+extern const struct wpa_driver_ops wpa_driver_macsec_sonic_ops;
+#endif /* CONFIG_DRIVER_MACSEC_SONIC */
 #ifdef CONFIG_DRIVER_ROBOSWITCH
 /* driver_roboswitch.c */
 extern const struct wpa_driver_ops wpa_driver_roboswitch_ops;
