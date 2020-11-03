@@ -18,6 +18,16 @@ DRV_OBJS += src/drivers/driver_wired.c
 NEED_DRV_WIRED_COMMON=1
 endif
 
+ifdef CONFIG_DRIVER_MACSEC_SONIC
+DRV_CFLAGS += -DCONFIG_DRIVER_MACSEC_SONIC
+DRV_OBJS += src/drivers/driver_macsec_sonic.c
+DRV_OBJS += src/drivers/sonic_operators.cpp
+DRV_LIBS += -lswsscommon -lstdc++
+NEED_DRV_WIRED_COMMON=1
+CONFIG_LIBNL3_ROUTE=y
+NEED_LIBNL=y
+endif
+
 ifdef CONFIG_DRIVER_MACSEC_LINUX
 DRV_CFLAGS += -DCONFIG_DRIVER_MACSEC_LINUX
 DRV_OBJS += src/drivers/driver_macsec_linux.c
