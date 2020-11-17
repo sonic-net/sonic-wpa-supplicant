@@ -18,6 +18,7 @@ struct macsec_init_params;
 #define MI_LEN			12  /* 96-bit Member Identifier */
 #define MAX_KEY_LEN		32  /* 32 bytes, 256 bits */
 #define MAX_CKN_LEN		32  /* 32 bytes, 256 bits */
++#define SALT_LEN		12  /* 96-bit salt */
 
 /* MKA timer, unit: millisecond */
 #define MKA_HELLO_TIME		2000
@@ -65,7 +66,8 @@ struct data_key {
 	bool transmits;
 	bool receives;
 	struct os_time created_time;
-	u32 next_pn;
+	u64 next_pn;
+	u8 salt[SALT_LEN];
 
 	/* not defined data */
 	bool rx_latest;
@@ -83,6 +85,7 @@ struct transmit_sc {
 
 	struct os_time created_time; /* Time createdTime */
 
+	u32 ssci; /* SSCI - XPN cipher suites only */
 	u8 encoding_sa; /* AN encodingSA (read only) */
 	u8 enciphering_sa; /* AN encipheringSA (read only) */
 
@@ -94,7 +97,7 @@ struct transmit_sc {
 /* TransmitSA in IEEE Std 802.1AE-2006, Figure 10-6 */
 struct transmit_sa {
 	bool in_use; /* bool inUse (read only) */
-	u32 next_pn; /* PN nextPN (read only) */
+	u64 next_pn; /* PN nextPN (read only) */
 	struct os_time created_time; /* Time createdTime */
 
 	bool enable_transmit; /* bool EnableTransmit */
@@ -114,24 +117,26 @@ struct receive_sc {
 
 	struct os_time created_time; /* Time createdTime */
 
+	u32 ssci; /* SSCI - XPN cipher suites only */
+
 	struct dl_list list;
 	struct dl_list sa_list;
 };
 
 /* ReceiveSA in IEEE Std 802.1AE-2006, Figure 10-6 */
 struct receive_sa {
-	bool enable_receive; /* bool enableReceive */
 	bool in_use; /* bool inUse (read only) */
-
-	u32 next_pn; /* PN nextPN (read only) */
-	u32 lowest_pn; /* PN lowestPN (read only) */
-	u8 an;
+	u64 next_pn; /* PN nextPN (read only) */
+	u64 lowest_pn; /* PN lowestPN (read only) */
 	struct os_time created_time;
 
-	struct data_key *pkey;
-	struct receive_sc *sc; /* list entry in struct receive_sc::sa_list */
+	bool enable_receive; /* bool enableReceive */
 
-	struct dl_list list;
+	u8 an;
+	struct data_key *pkey;
+
+	struct receive_sc *sc;
+	struct dl_list list; /* list entry in struct receive_sc::sa_list */
 };
 
 struct ieee802_1x_kay_ctx {
@@ -185,6 +190,7 @@ struct ieee802_1x_kay {
 	bool macsec_desired;
 	bool macsec_protect;
 	bool macsec_encrypt;
+	bool macsec_include_sci;
 	bool macsec_replay_protect;
 	u32 macsec_replay_window;
 	enum validate_frames macsec_validate;
@@ -208,6 +214,7 @@ struct ieee802_1x_kay {
 	char if_name[IFNAMSIZ];
 
 	unsigned int macsec_csindex;  /* MACsec cipher suite table index */
+	u64 macsec_cs_id;
 	int mka_algindex;  /* MKA alg table index */
 
 	u32 dist_kn;
@@ -218,7 +225,7 @@ struct ieee802_1x_kay {
 	u8 mka_version;
 	u8 algo_agility[4];
 
-	u32 pn_exhaustion;
+	u64 pn_exhaustion;
 	bool port_enable;
 	bool rx_enable;
 	bool tx_enable;
@@ -239,6 +246,8 @@ u64 mka_sci_u64(struct ieee802_1x_mka_sci *sci);
 
 struct ieee802_1x_kay *
 ieee802_1x_kay_init(struct ieee802_1x_kay_ctx *ctx, enum macsec_policy policy,
+		    int macsec_ciphersuite, enum confidentiality_offset macsec_offset,
+		    bool macsec_include_sci,
 		    bool macsec_replay_protect, u32 macsec_replay_window,
 		    u16 port, u8 priority, const char *ifname, const u8 *addr);
 void ieee802_1x_kay_deinit(struct ieee802_1x_kay *kay);
@@ -274,6 +283,8 @@ int ieee802_1x_kay_enable_rx_sas(struct ieee802_1x_kay *kay,
 				 struct ieee802_1x_mka_ki *lki);
 int ieee802_1x_kay_enable_new_info(struct ieee802_1x_kay *kay);
 int ieee802_1x_kay_get_status(struct ieee802_1x_kay *kay, char *buf,
+			      size_t buflen);
+int ieee802_1x_kay_get_macsec(struct ieee802_1x_kay *kay, char *buf,
 			      size_t buflen);
 int ieee802_1x_kay_get_mib(struct ieee802_1x_kay *kay, char *buf,
 			   size_t buflen);

@@ -20,8 +20,6 @@
 #define STATE_MACHINE_DATA struct ieee802_1x_cp_sm
 #define STATE_MACHINE_DEBUG_PREFIX "CP"
 
-static u64 default_cs_id = CS_ID_GCM_AES_128;
-
 /* The variable defined in clause 12 in IEEE Std 802.1X-2010 */
 enum connect_type { PENDING, UNAUTHENTICATED, AUTHENTICATED, SECURE };
 
@@ -210,16 +208,15 @@ SM_STATE(CP, SECURED)
 	sm->replay_protect = sm->kay->macsec_replay_protect;
 	sm->validate_frames = sm->kay->macsec_validate;
 
-	/* NOTE: now no other than default cipher suite (AES-GCM-128) */
 	sm->current_cipher_suite = sm->cipher_suite;
 	secy_cp_control_current_cipher_suite(sm->kay, sm->current_cipher_suite);
 
 	sm->confidentiality_offset = sm->cipher_offset;
+	secy_cp_control_confidentiality_offset(sm->kay,
+					       sm->confidentiality_offset);
 
 	sm->port_valid = true;
 
-	secy_cp_control_confidentiality_offset(sm->kay,
-					       sm->confidentiality_offset);
 	secy_cp_control_protect_frames(sm->kay, sm->protect_frames);
 	secy_cp_control_encrypt(sm->kay, sm->kay->macsec_encrypt);
 	secy_cp_control_validate_frames(sm->kay, sm->validate_frames);
@@ -473,9 +470,9 @@ struct ieee802_1x_cp_sm * ieee802_1x_cp_sm_init(struct ieee802_1x_kay *kay)
 	sm->orx = false;
 	sm->otx = false;
 
-	sm->current_cipher_suite = default_cs_id;
-	sm->cipher_suite = default_cs_id;
-	sm->cipher_offset = CONFIDENTIALITY_OFFSET_0;
+	sm->current_cipher_suite = kay->macsec_cs_id;
+	sm->cipher_suite = kay->macsec_cs_id;
+	sm->cipher_offset = kay->macsec_confidentiality;
 	sm->confidentiality_offset = sm->cipher_offset;
 	sm->transmit_delay = MKA_LIFE_TIME;
 	sm->retire_delay = MKA_SAK_RETIRE_TIME;
