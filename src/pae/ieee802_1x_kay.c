@@ -757,7 +757,7 @@ ieee802_1x_kay_move_live_peer(struct ieee802_1x_mka_participant *participant,
 		if (os_memcmp(&new_rxsc->sci, &rxsc->sci,
 			      sizeof(struct ieee802_1x_mka_sci)) > 0) {
 			dl_list_add(&rxsc->list, &new_rxsc->list);
-			found = TRUE;
+			found = true;
 			break;
 		}
 	}

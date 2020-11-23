@@ -18,7 +18,7 @@ struct macsec_init_params;
 #define MI_LEN			12  /* 96-bit Member Identifier */
 #define MAX_KEY_LEN		32  /* 32 bytes, 256 bits */
 #define MAX_CKN_LEN		32  /* 32 bytes, 256 bits */
-+#define SALT_LEN		12  /* 96-bit salt */
+#define SALT_LEN		12  /* 96-bit salt */
 
 /* MKA timer, unit: millisecond */
 #define MKA_HELLO_TIME		2000
