@@ -1,0 +1,112 @@
+From 8155b36fae793266fc3a990c30bbf6b72a1b0a1d Mon Sep 17 00:00:00 2001
+From: Didier Raboud <odyx@debian.org>
+Date: Sun, 16 Feb 2020 16:14:54 +0100
+Subject: [PATCH] Fix VERSION_STR printf() calls in case the postfix strings
+ include %
+
+Do not use VERSION_STR directly as the format string to printf() since
+it is possible for that string to contain '%'.
+
+Signed-off-by: Didier Raboud <odyx@debian.org>
+---
+ hostapd/main.c                  | 5 +++--
+ hs20/server/hs20_spp_server.c   | 2 +-
+ wpa_supplicant/eapol_test.c     | 2 +-
+ wpa_supplicant/wpa_priv.c       | 5 +++--
+ wpa_supplicant/wpa_supplicant.c | 2 +-
+ 5 files changed, 9 insertions(+), 7 deletions(-)
+
+--- a/hostapd/main.c
++++ b/hostapd/main.c
+@@ -451,11 +451,12 @@
+ static void show_version(void)
+ {
+ 	fprintf(stderr,
+-		"hostapd v" VERSION_STR "\n"
++		"hostapd v%s\n"
+ 		"User space daemon for IEEE 802.11 AP management,\n"
+ 		"IEEE 802.1X/WPA/WPA2/EAP/RADIUS Authenticator\n"
+ 		"Copyright (c) 2002-2019, Jouni Malinen <j@w1.fi> "
+-		"and contributors\n");
++		"and contributors\n",
++		VERSION_STR);
+ }
+ 
+ 
+--- a/hs20/server/hs20_spp_server.c
++++ b/hs20/server/hs20_spp_server.c
+@@ -176,7 +176,7 @@
+ 			ctx.root_dir = optarg;
+ 			break;
+ 		case 'v':
+-			printf("hs20_spp_server v" VERSION_STR "\n");
++			printf("hs20_spp_server v%s\n", VERSION_STR);
+ 			return 0;
+ 		default:
+ 			usage();
+--- a/wpa_supplicant/eapol_test.c
++++ b/wpa_supplicant/eapol_test.c
+@@ -1390,7 +1390,7 @@
+ 			eapol_test.ctrl_iface = 1;
+ 			break;
+ 		case 'v':
+-			printf("eapol_test v" VERSION_STR "\n");
++			printf("eapol_test v%s\n", VERSION_STR);
+ 			return 0;
+ 		case 'W':
+ 			wait_for_monitor++;
+--- a/wpa_supplicant/wpa_priv.c
++++ b/wpa_supplicant/wpa_priv.c
+@@ -1189,14 +1189,15 @@
+ 
+ static void usage(void)
+ {
+-	printf("wpa_priv v" VERSION_STR "\n"
++	printf("wpa_priv v%s\n"
+ 	       "Copyright (c) 2007-2017, Jouni Malinen <j@w1.fi> and "
+ 	       "contributors\n"
+ 	       "\n"
+ 	       "usage:\n"
+ 	       "  wpa_priv [-Bdd] [-c<ctrl dir>] [-P<pid file>] "
+ 	       "<driver:ifname> \\\n"
+-	       "           [driver:ifname ...]\n");
++	       "           [driver:ifname ...]\n",
++	       VERSION_STR);
+ }
+ 
+ 
+--- a/wpa_supplicant/wpa_supplicant.c
++++ b/wpa_supplicant/wpa_supplicant.c
+@@ -6818,7 +6818,7 @@
+ 	wpa_debug_timestamp = global->params.wpa_debug_timestamp =
+ 		params->wpa_debug_timestamp;
+ 
+-	wpa_printf(MSG_DEBUG, "wpa_supplicant v" VERSION_STR);
++	wpa_printf(MSG_DEBUG, "wpa_supplicant v%s", VERSION_STR);
+ 
+ 	if (eloop_init()) {
+ 		wpa_printf(MSG_ERROR, "Failed to initialize event loop");
+--- a/wpa_supplicant/interworking.c
++++ b/wpa_supplicant/interworking.c
+@@ -2258,7 +2258,7 @@
+ 			realm++;
+ 		wpa_msg(wpa_s, MSG_DEBUG,
+ 			"Interworking: Search for match with SIM/USIM domain %s",
+-			realm);
++			realm ? realm : "[NULL]");
+ 		if (realm &&
+ 		    domain_name_list_contains(domain_names, realm, 1))
+ 			return 1;
+--- a/wpa_supplicant/dbus/dbus_new.c
++++ b/wpa_supplicant/dbus/dbus_new.c
+@@ -4791,8 +4791,8 @@
+ 
+ 	if (!wpa_s->dbus_groupobj_path) {
+ 		wpa_printf(MSG_DEBUG,
+-			   "%s: Group object '%s' already unregistered",
+-			   __func__, wpa_s->dbus_groupobj_path);
++			   "%s: Group object already unregistered",
++			   __func__);
+ 		return;
+ 	}
+ 

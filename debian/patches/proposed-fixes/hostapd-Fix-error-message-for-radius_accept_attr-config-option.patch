@@ -1,0 +1,26 @@
+From: Pali Rohár <pali@kernel.org>
+To: hostap@lists.infradead.org
+Subject: hostapd: Fix error message for radius_accept_attr config option
+Date: Mon, 22 Jun 2020 13:05:58 +0200
+Message-Id: <20200622110558.12068-1-pali@kernel.org>
+
+Error message contained wrong config option.
+
+Origin: https://patchwork.ozlabs.org/project/hostap/patch/20200622110558.12068-1-pali@kernel.org/
+---
+ hostapd/config_file.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/hostapd/config_file.c b/hostapd/config_file.c
+index 1861b5203..06925de89 100644
+--- a/hostapd/config_file.c
++++ b/hostapd/config_file.c
+@@ -340,7 +340,7 @@ static int hostapd_config_read_eap_user(const char *fname,
+ 			struct hostapd_radius_attr *attr, *a;
+ 			attr = hostapd_parse_radius_attr(buf + 19);
+ 			if (attr == NULL) {
+-				wpa_printf(MSG_ERROR, "Invalid radius_auth_req_attr: %s",
++				wpa_printf(MSG_ERROR, "Invalid radius_accept_attr: %s",
+ 					   buf + 19);
+ 				user = NULL; /* already in the BSS list */
+ 				goto failed;
