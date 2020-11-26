@@ -17,6 +17,7 @@
 #include "utils/common.h"
 #include "driver.h"
 #include "driver_wired_common.h"
+#include "common/defs.h"
 #include "sonic_operators.h"
 
 #define DRV_PREFIX "macsec_sonic"
