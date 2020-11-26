@@ -114,7 +114,7 @@ struct macsec_sonic_data
     struct driver_wired_common_data common;
 
     const char * ifname;
-    sonic_db_handle sonic_mamager;
+    sonic_db_handle sonic_manager;
 };
 
 static void *macsec_sonic_wpa_init(void *ctx, const char *ifname)
@@ -132,7 +132,7 @@ static void *macsec_sonic_wpa_init(void *ctx, const char *ifname)
     }
 
     drv->ifname = ifname;
-    drv->sonic_mamager = sonic_db_get_manager();
+    drv->sonic_manager = sonic_db_get_manager();
 
     ENTER_LOG;
     return drv;
@@ -159,7 +159,7 @@ static int macsec_sonic_macsec_init(void *priv, struct macsec_init_params *param
         {"cipher_suite" , "GCM-AES-128"}, // Default cipher suite
     };
     int ret = sonic_db_set(
-        drv->sonic_mamager,
+        drv->sonic_manager,
         APPL_DB,
         APP_MACSEC_PORT_TABLE_NAME,
         drv->ifname,
@@ -171,7 +171,7 @@ static int macsec_sonic_macsec_init(void *priv, struct macsec_init_params *param
             {"state", "ok"}
         };
         ret = sonic_db_wait(
-            drv->sonic_mamager,
+            drv->sonic_manager,
             STATE_DB,
             STATE_MACSEC_PORT_TABLE_NAME,
             SET_COMMAND,
@@ -187,14 +187,14 @@ static int macsec_sonic_macsec_deinit(void *priv)
     ENTER_LOG;
 
     int ret = sonic_db_del(
-        drv->sonic_mamager,
+        drv->sonic_manager,
         APPL_DB,
         APP_MACSEC_PORT_TABLE_NAME,
         drv->ifname);
     if (ret == SONIC_DB_SUCCESS)
     {
         ret = sonic_db_wait(
-            drv->sonic_mamager,
+            drv->sonic_manager,
             STATE_DB,
             STATE_MACSEC_PORT_TABLE_NAME,
             DEL_COMMAND,
@@ -232,7 +232,7 @@ static int macsec_sonic_enable_protect_frames(void *priv, Boolean enabled)
         {"enable_protect", enabled ? "true" : "false"}
     };
     return sonic_db_set(
-        drv->sonic_mamager,
+        drv->sonic_manager,
         APPL_DB,
         APP_MACSEC_PORT_TABLE_NAME,
         drv->ifname,
@@ -256,7 +256,7 @@ static int macsec_sonic_enable_encrypt(void *priv, Boolean enabled)
         {"enable_encrypt", enabled ? "true" : "false"}
     };
     return sonic_db_set(
-        drv->sonic_mamager,
+        drv->sonic_manager,
         APPL_DB,
         APP_MACSEC_PORT_TABLE_NAME,
         drv->ifname,
@@ -284,7 +284,7 @@ static int macsec_sonic_set_replay_protect(void *priv, Boolean enabled,
         {"replay_window", buffer}
     };
     int ret = sonic_db_set(
-        drv->sonic_mamager,
+        drv->sonic_manager,
         APPL_DB,
         APP_MACSEC_PORT_TABLE_NAME,
         drv->ifname,
@@ -324,7 +324,7 @@ static int macsec_sonic_set_current_cipher_suite(void *priv, u64 cs)
         {"cipher_suite", cipher_suite},
     };
     return sonic_db_set(
-        drv->sonic_mamager,
+        drv->sonic_manager,
         APPL_DB,
         APP_MACSEC_PORT_TABLE_NAME,
         drv->ifname,
@@ -348,7 +348,7 @@ static int macsec_sonic_enable_controlled_port(void *priv, Boolean enabled)
         {"enable", enabled ? "true" : "false"}
     };
     return sonic_db_set(
-        drv->sonic_mamager,
+        drv->sonic_manager,
         APPL_DB,
         APP_MACSEC_PORT_TABLE_NAME,
         drv->ifname,
@@ -368,7 +368,7 @@ static int macsec_sonic_get_receive_lowest_pn(void *priv, struct receive_sa *sa)
     char * key = CREATE_SA_KEY(drv->ifname, sa, APP_DB_SEPARATOR);
     unsigned long long pn = 1;
     int ret = sonic_db_get_counter(
-        drv->sonic_mamager,
+        drv->sonic_manager,
         COUNTERS_TABLE,
         key,
         "SAI_MACSEC_SA_ATTR_MINIMUM_XPN",
@@ -376,7 +376,7 @@ static int macsec_sonic_get_receive_lowest_pn(void *priv, struct receive_sa *sa)
     PRINT_LOG("SA %s PN %llu", key, pn);
     if (ret == SONIC_DB_SUCCESS)
     {
-        sa->next_pn = pn;
+        sa->lowest_pn = pn;
     }
     free(key);
     return ret;
@@ -393,14 +393,14 @@ static int macsec_sonic_set_receive_lowest_pn(void *priv, struct receive_sa *sa)
     struct macsec_sonic_data *drv = priv;
 
     char * key = CREATE_SA_KEY(drv->ifname, sa, APP_DB_SEPARATOR);
-    PRINT_LOG("%s - %u", key, sa->next_pn);
-    char * buffer = create_buffer("%u", sa->next_pn);
+    PRINT_LOG("%s - %u", key, sa->lowest_pn);
+    char * buffer = create_buffer("%u", sa->lowest_pn);
     const struct sonic_db_name_value_pair pairs[] = 
     {
         {"lowest_acceptable_pn", buffer}
     };
     int ret = sonic_db_set(
-        drv->sonic_mamager,
+        drv->sonic_manager,
         APPL_DB,
         APP_MACSEC_INGRESS_SA_TABLE_NAME,
         key,
@@ -424,7 +424,7 @@ static int macsec_sonic_get_transmit_next_pn(void *priv, struct transmit_sa *sa)
     char * key = CREATE_SA_KEY(drv->ifname, sa, APP_DB_SEPARATOR);
     unsigned long long pn = 1;
     int ret = sonic_db_get_counter(
-        drv->sonic_mamager,
+        drv->sonic_manager,
         COUNTERS_TABLE,
         key,
         "SAI_MACSEC_SA_ATTR_XPN",
@@ -457,7 +457,7 @@ static int macsec_sonic_set_transmit_next_pn(void *priv, struct transmit_sa *sa)
         {"init_pn", buffer}
     };
     int ret = sonic_db_set(
-        drv->sonic_mamager,
+        drv->sonic_manager,
         APPL_DB,
         APP_MACSEC_EGRESS_SA_TABLE_NAME,
         key,
@@ -501,7 +501,7 @@ static int macsec_sonic_create_receive_sc(void *priv, struct receive_sc *sc,
     // Validation
     // OFFSET
     int ret = sonic_db_set(
-        drv->sonic_mamager,
+        drv->sonic_manager,
         APPL_DB,
         APP_MACSEC_INGRESS_SC_TABLE_NAME,
         key,
@@ -515,7 +515,7 @@ static int macsec_sonic_create_receive_sc(void *priv, struct receive_sc *sc,
         };
         char * key = CREATE_SC_KEY(drv->ifname, sc, STATE_DB_SEPARATOR);
         ret = sonic_db_wait(
-            drv->sonic_mamager,
+            drv->sonic_manager,
             STATE_DB,
             STATE_MACSEC_INGRESS_SC_TABLE_NAME,
             SET_COMMAND,
@@ -540,7 +540,7 @@ static int macsec_sonic_delete_receive_sc(void *priv, struct receive_sc *sc)
     char * key = CREATE_SC_KEY(drv->ifname, sc, APP_DB_SEPARATOR);
     PRINT_LOG("%s", key);
     int ret = sonic_db_del(
-        drv->sonic_mamager,
+        drv->sonic_manager,
         APPL_DB,
         APP_MACSEC_INGRESS_SC_TABLE_NAME,
         key);
@@ -549,7 +549,7 @@ static int macsec_sonic_delete_receive_sc(void *priv, struct receive_sc *sc)
     {
         char * key = CREATE_SC_KEY(drv->ifname, sc, STATE_DB_SEPARATOR);
         ret = sonic_db_wait(
-            drv->sonic_mamager,
+            drv->sonic_manager,
             STATE_DB,
             STATE_MACSEC_INGRESS_SC_TABLE_NAME,
             DEL_COMMAND,
@@ -574,12 +574,12 @@ static int macsec_sonic_create_receive_sa(void *priv, struct receive_sa *sa)
     char * key = CREATE_SA_KEY(drv->ifname, sa, APP_DB_SEPARATOR);
     char * sak_id = create_binary_hex(&sa->pkey->key_identifier, sizeof(sa->pkey->key_identifier));
     char * sak = create_binary_hex(sa->pkey->key, sa->pkey->key_len);
-    char * pn = create_buffer("%u", sa->next_pn);
+    char * pn = create_buffer("%u", sa->lowest_pn);
     char * auth_key = create_auth_key(sa->pkey->key, sa->pkey->key_len);
     PRINT_LOG("%s (enable_receive=%d next_pn=%u) %s %s",
         key,
         sa->enable_receive,
-        sa->next_pn,
+        sa->lowest_pn,
         sak_id,
         sak);
 
@@ -594,7 +594,7 @@ static int macsec_sonic_create_receive_sa(void *priv, struct receive_sa *sa)
         {"salt", ""}
     };
     int ret = sonic_db_set(
-        drv->sonic_mamager,
+        drv->sonic_manager,
         APPL_DB,
         APP_MACSEC_INGRESS_SA_TABLE_NAME,
         key,
@@ -620,7 +620,7 @@ static int macsec_sonic_delete_receive_sa(void *priv, struct receive_sa *sa)
     char * key = CREATE_SA_KEY(drv->ifname, sa, APP_DB_SEPARATOR);
     PRINT_LOG("%s", key);
     int ret = sonic_db_del(
-        drv->sonic_mamager,
+        drv->sonic_manager,
         APPL_DB,
         APP_MACSEC_INGRESS_SA_TABLE_NAME,
         key);
@@ -629,7 +629,7 @@ static int macsec_sonic_delete_receive_sa(void *priv, struct receive_sa *sa)
     {
         char * key = CREATE_SA_KEY(drv->ifname, sa, STATE_DB_SEPARATOR);
         ret = sonic_db_wait(
-            drv->sonic_mamager,
+            drv->sonic_manager,
             STATE_DB,
             STATE_MACSEC_INGRESS_SA_TABLE_NAME,
             DEL_COMMAND,
@@ -658,7 +658,7 @@ static int macsec_sonic_enable_receive_sa(void *priv, struct receive_sa *sa)
         {"active", "true"},
     };
     int ret = sonic_db_set(
-        drv->sonic_mamager,
+        drv->sonic_manager,
         APPL_DB,
         APP_MACSEC_INGRESS_SA_TABLE_NAME,
         key,
@@ -672,7 +672,7 @@ static int macsec_sonic_enable_receive_sa(void *priv, struct receive_sa *sa)
         };
         char * key = CREATE_SA_KEY(drv->ifname, sa, STATE_DB_SEPARATOR);
         ret = sonic_db_wait(
-            drv->sonic_mamager,
+            drv->sonic_manager,
             STATE_DB,
             STATE_MACSEC_INGRESS_SA_TABLE_NAME,
             SET_COMMAND,
@@ -701,7 +701,7 @@ static int macsec_sonic_disable_receive_sa(void *priv, struct receive_sa *sa)
         {"active", "false"},
     };
     int ret = sonic_db_set(
-        drv->sonic_mamager,
+        drv->sonic_manager,
         APPL_DB,
         APP_MACSEC_INGRESS_SA_TABLE_NAME,
         key,
@@ -736,7 +736,7 @@ static int macsec_sonic_create_transmit_sc(
         {"encoding_an", "0"},
     };
     int ret = sonic_db_set(
-        drv->sonic_mamager,
+        drv->sonic_manager,
         APPL_DB,
         APP_MACSEC_EGRESS_SC_TABLE_NAME,
         key,
@@ -750,7 +750,7 @@ static int macsec_sonic_create_transmit_sc(
         };
         char * key = CREATE_SC_KEY(drv->ifname, sc, STATE_DB_SEPARATOR);
         ret = sonic_db_wait(
-            drv->sonic_mamager,
+            drv->sonic_manager,
             STATE_DB,
             STATE_MACSEC_EGRESS_SC_TABLE_NAME,
             SET_COMMAND,
@@ -776,7 +776,7 @@ static int macsec_sonic_delete_transmit_sc(void *priv, struct transmit_sc *sc)
     char * key = CREATE_SC_KEY(drv->ifname, sc, APP_DB_SEPARATOR);
     PRINT_LOG("%s", key);
     int ret = sonic_db_del(
-        drv->sonic_mamager,
+        drv->sonic_manager,
         APPL_DB,
         APP_MACSEC_EGRESS_SC_TABLE_NAME,
         key);
@@ -785,7 +785,7 @@ static int macsec_sonic_delete_transmit_sc(void *priv, struct transmit_sc *sc)
     {
         char * key = CREATE_SC_KEY(drv->ifname, sc, STATE_DB_SEPARATOR);
         ret = sonic_db_wait(
-            drv->sonic_mamager,
+            drv->sonic_manager,
             STATE_DB,
             STATE_MACSEC_EGRESS_SC_TABLE_NAME,
             DEL_COMMAND,
@@ -825,11 +825,11 @@ static int macsec_sonic_create_transmit_sa(void *priv, struct transmit_sa *sa)
     {
         {"sak", sak},
         {"auth_key", auth_key},
-        {"init_pn", pn},
+        {"next_pn", pn},
         {"salt", ""}
     };
     int ret = sonic_db_set(
-        drv->sonic_mamager,
+        drv->sonic_manager,
         APPL_DB,
         APP_MACSEC_EGRESS_SA_TABLE_NAME,
         key,
@@ -856,7 +856,7 @@ static int macsec_sonic_delete_transmit_sa(void *priv, struct transmit_sa *sa)
     char * key = CREATE_SA_KEY(drv->ifname, sa, APP_DB_SEPARATOR);
     PRINT_LOG("%s", key);
     int ret = sonic_db_del(
-        drv->sonic_mamager,
+        drv->sonic_manager,
         APPL_DB,
         APP_MACSEC_EGRESS_SA_TABLE_NAME,
         key);
@@ -865,7 +865,7 @@ static int macsec_sonic_delete_transmit_sa(void *priv, struct transmit_sa *sa)
     {
         char * key = CREATE_SA_KEY(drv->ifname, sa, STATE_DB_SEPARATOR);
         ret = sonic_db_wait(
-            drv->sonic_mamager,
+            drv->sonic_manager,
             STATE_DB,
             STATE_MACSEC_EGRESS_SA_TABLE_NAME,
             DEL_COMMAND,
@@ -895,7 +895,7 @@ static int macsec_sonic_enable_transmit_sa(void *priv, struct transmit_sa *sa)
         {"encoding_an", encoding_an},
     };
     int ret = sonic_db_set(
-        drv->sonic_mamager,
+        drv->sonic_manager,
         APPL_DB,
         APP_MACSEC_EGRESS_SC_TABLE_NAME,
         key,
@@ -909,7 +909,7 @@ static int macsec_sonic_enable_transmit_sa(void *priv, struct transmit_sa *sa)
         };
         char * key = CREATE_SA_KEY(drv->ifname, sa, STATE_DB_SEPARATOR);
         ret = sonic_db_wait(
-            drv->sonic_mamager,
+            drv->sonic_manager,
             STATE_DB,
             STATE_MACSEC_EGRESS_SA_TABLE_NAME,
             SET_COMMAND,
