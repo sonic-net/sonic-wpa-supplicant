@@ -218,14 +218,14 @@ static int macsec_sonic_get_capability(void *priv, enum macsec_cap *cap)
 /**
  * macsec_sonic_enable_protect_frames - Set protect frames status
  * @priv: Private driver interface data
- * @enabled: TRUE = protect frames enabled
- *           FALSE = protect frames disabled
+ * @enabled: true = protect frames enabled
+ *           false = protect frames disabled
  * Returns: 0 on success, -1 on failure (or if not supported)
  */
-static int macsec_sonic_enable_protect_frames(void *priv, Boolean enabled)
+static int macsec_sonic_enable_protect_frames(void *priv, bool enabled)
 {
     struct macsec_sonic_data *drv = priv;
-    PRINT_LOG("%s", enabled ? "TRUE" : "FALSE");
+    PRINT_LOG("%s", enabled ? "true" : "false");
 
     const struct sonic_db_name_value_pair pairs[] = 
     {
@@ -242,14 +242,14 @@ static int macsec_sonic_enable_protect_frames(void *priv, Boolean enabled)
 /**
  * macsec_sonic_enable_encrypt - Set protect frames status
  * @priv: Private driver interface data
- * @enabled: TRUE = protect frames enabled
- *           FALSE = protect frames disabled
+ * @enabled: true = protect frames enabled
+ *           false = protect frames disabled
  * Returns: 0 on success, -1 on failure (or if not supported)
  */
-static int macsec_sonic_enable_encrypt(void *priv, Boolean enabled)
+static int macsec_sonic_enable_encrypt(void *priv, bool enabled)
 {
     struct macsec_sonic_data *drv = priv;
-    PRINT_LOG("%s", enabled ? "TRUE" : "FALSE");
+    PRINT_LOG("%s", enabled ? "true" : "false");
 
     const struct sonic_db_name_value_pair pairs[] = 
     {
@@ -266,16 +266,16 @@ static int macsec_sonic_enable_encrypt(void *priv, Boolean enabled)
 /**
  * macsec_sonic_set_replay_protect - Set replay protect status and window size
  * @priv: Private driver interface data
- * @enabled: TRUE = replay protect enabled
- *           FALSE = replay protect disabled
+ * @enabled: true = replay protect enabled
+ *           false = replay protect disabled
  * @window: replay window size, valid only when replay protect enabled
  * Returns: 0 on success, -1 on failure (or if not supported)
  */
-static int macsec_sonic_set_replay_protect(void *priv, Boolean enabled,
+static int macsec_sonic_set_replay_protect(void *priv, bool enabled,
                                            u32 window)
 {
     struct macsec_sonic_data *drv = priv;
-    PRINT_LOG("%s %u", enabled ? "TRUE" : "FALSE", window);
+    PRINT_LOG("%s %u", enabled ? "true" : "false", window);
 
     char * buffer = create_buffer("%u", window);
     const struct sonic_db_name_value_pair pairs[] = 
@@ -334,14 +334,14 @@ static int macsec_sonic_set_current_cipher_suite(void *priv, u64 cs)
 /**
  * macsec_sonic_enable_controlled_port - Set controlled port status
  * @priv: Private driver interface data
- * @enabled: TRUE = controlled port enabled
- *           FALSE = controlled port disabled
+ * @enabled: true = controlled port enabled
+ *           false = controlled port disabled
  * Returns: 0 on success, -1 on failure (or if not supported)
  */
-static int macsec_sonic_enable_controlled_port(void *priv, Boolean enabled)
+static int macsec_sonic_enable_controlled_port(void *priv, bool enabled)
 {
     struct macsec_sonic_data *drv = priv;
-    PRINT_LOG("%s", enabled ? "TRUE" : "FALSE");
+    PRINT_LOG("%s", enabled ? "true" : "false");
 
     const struct sonic_db_name_value_pair pairs[] = 
     {
