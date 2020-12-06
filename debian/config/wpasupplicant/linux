@@ -79,6 +79,9 @@ CONFIG_DRIVER_WIRED=y
 # Driver interface for Linux MACsec drivers
 CONFIG_DRIVER_MACSEC_LINUX=y
 
+# Driver interface for SONiC MACsec drivers
+CONFIG_DRIVER_MACSEC_SONIC=y
+
 # Driver interface for the Broadcom RoboSwitch family
 #CONFIG_DRIVER_ROBOSWITCH=y
 
