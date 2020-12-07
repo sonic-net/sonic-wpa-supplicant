@@ -19,13 +19,27 @@ resources:
     - repository: SONiCSWSSCommon
       type: github
       name: Azure/sonic-swss-common
-      endpoint: Pterosaur
+      endpoint: sonic-wpa-supplicant
 
 steps:
 - checkout: self
 - checkout: SONiCSWSSCommon
 - script: |
-    sudo apt-get install -qq -y qtbase5-dev libdbus-glib-1-2 libdbus-glib-1-dev libpcsclite-dev docbook-to-man docbook-utils aspell-en libhiredis-dev libnl-3-dev libnl-genl-3-dev libnl-route-3-dev libnl-nf-3-dev swig3.0 libpython2.7-dev
+    sudo apt-get install -qq -y \
+      qtbase5-dev \
+      libdbus-glib-1-2 \
+      libdbus-glib-1-dev \
+      libpcsclite-dev \
+      docbook-to-man \
+      docbook-utils \
+      aspell-en \
+      libhiredis-dev \
+      libnl-3-dev \
+      libnl-genl-3-dev \
+      libnl-route-3-dev \
+      libnl-nf-3-dev \
+      swig3.0 \
+      libpython2.7-dev
   displayName: "Install Dependencies"
 - script: |
     ./autogen.sh
