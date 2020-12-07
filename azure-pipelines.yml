@@ -38,8 +38,7 @@ steps:
       libnl-genl-3-dev \
       libnl-route-3-dev \
       libnl-nf-3-dev \
-      swig3.0 \
-      libpython2.7-dev
+      swig3.0 libpython2.7-dev
   displayName: "Install Dependencies"
 - script: |
     ./autogen.sh
