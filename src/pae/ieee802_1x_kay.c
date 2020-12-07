@@ -4090,19 +4090,19 @@ int ieee802_1x_kay_get_status(struct ieee802_1x_kay *kay, char *buf,
 			  kay->dist_kn - 1,
 			  kay->rcvd_keys,
 			  kay->mka_hello_time);
-	if (os_snprintf_error(buflen, res))
+	if (os_snprintf_error(end - pos, res))
 		return 0;
 	pos += res;
 
 	res = os_snprintf(pos, end - pos,
 			  "actor_sci=%s\n", sci_txt(&kay->actor_sci));
-	if (os_snprintf_error(buflen, res))
+	if (os_snprintf_error(end - pos, res))
 		return end - pos;
 	pos += res;
 
 	res = os_snprintf(pos, end - pos,
 			  "key_server_sci=%s\n", sci_txt(&kay->key_server_sci));
-	if (os_snprintf_error(buflen, res))
+	if (os_snprintf_error(end - pos, res))
 		return end - pos;
 	pos += res;
 
@@ -4113,7 +4113,7 @@ int ieee802_1x_kay_get_status(struct ieee802_1x_kay *kay, char *buf,
 
 		res = os_snprintf(pos2, end - pos2, "participant_idx=%d\nckn=",
 			count);
-		if (os_snprintf_error(buflen, res))
+		if (os_snprintf_error(end - pos2, res))
 			return end - pos;
 		pos2 += res;
 		count++;
@@ -4139,7 +4139,7 @@ int ieee802_1x_kay_get_status(struct ieee802_1x_kay *kay, char *buf,
 				  dl_list_len(&p->potential_peers),
 				  yes_no(p->is_key_server),
 				  yes_no(p->is_elected));
-		if (os_snprintf_error(buflen, res))
+		if (os_snprintf_error(end - pos2, res))
 			return end - pos;
 		pos2 += res;
 		pos = pos2;
@@ -4182,13 +4182,13 @@ int ieee802_1x_kay_get_macsec(struct ieee802_1x_kay *kay, char *buf,
 
 	res = os_snprintf(pos, end - pos, "Include SCI: %s\n",
 			  yes_no(kay->macsec_include_sci));
-	if (os_snprintf_error(buflen, res))
+	if (os_snprintf_error(end - pos, res))
 		return end - pos;
 	pos += res;
 
 	res = os_snprintf(pos, end - pos, "Replay Protect: %s\tReplay Window: %u\n",
 			  yes_no(kay->macsec_replay_protect), kay->macsec_replay_window);
-	if (os_snprintf_error(buflen, res))
+	if (os_snprintf_error(end - pos, res))
 		return end - pos;
 	pos += res;
 
@@ -4202,7 +4202,7 @@ int ieee802_1x_kay_get_macsec(struct ieee802_1x_kay *kay, char *buf,
 		if (p->txsc) {
 			res = os_snprintf(pos2, end - pos2, "\tTXSC: %s\n",
 					  sci_txt(&p->txsc->sci));
-			if (os_snprintf_error(buflen, res))
+			if (os_snprintf_error(end - pos2, res))
 				return end - pos;
 			pos2 += res;
 
@@ -4212,7 +4212,7 @@ int ieee802_1x_kay_get_macsec(struct ieee802_1x_kay *kay, char *buf,
 						  "\t\tAN: %u\tActive: %s\tPN: %lu\n",
 						  txsa->an, yes_no(txsa->in_use),
 						  txsa->next_pn);
-				if (os_snprintf_error(buflen, res))
+				if (os_snprintf_error(end - pos2, res))
 					return end - pos;
 				pos2 += res;
 			}
@@ -4220,7 +4220,7 @@ int ieee802_1x_kay_get_macsec(struct ieee802_1x_kay *kay, char *buf,
 		dl_list_for_each(rxsc, &p->rxsc_list, struct receive_sc, list) {
 			res = os_snprintf(pos2, end - pos2, "\tRXSC: %s\n",
 					  sci_txt(&rxsc->sci));
-			if (os_snprintf_error(buflen, res))
+			if (os_snprintf_error(end - pos2, res))
 				return end - pos;
 			pos2 += res;
 
@@ -4230,7 +4230,7 @@ int ieee802_1x_kay_get_macsec(struct ieee802_1x_kay *kay, char *buf,
 						  "\t\tAN: %u\tActive: %s\tPN: %lu\n",
 						  rxsa->an, yes_no(rxsa->in_use),
 						  rxsa->next_pn);
-				if (os_snprintf_error(buflen, res))
+				if (os_snprintf_error(end - pos2, res))
 					return end - pos;
 				pos2 += res;
 			}
