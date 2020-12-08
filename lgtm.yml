@@ -35,4 +35,4 @@ extraction:
     - "dpkg-deb -x libswsscommon-dev_1.0.0_amd64.deb $LGTM_WORKSPACE"
     index:
       build_command:
-      - "pushd wpa_supplicant; cp defconfig .config; make EXTRA_CFLAGS=\"-I$LGTM_WORKSPACE/usr/include -L$LGTM_WORKSPACE/usr/lib/x86_64-linux-gnu\"; popd"
+      - "pushd wpa_supplicant; cp defconfig .config;make EXTRA_CFLAGS=\"-I$LGTM_WORKSPACE/usr/include\" LDFLAGS=\"-L${LGTM_WORKSPACE}/usr/lib/x86_64-linux-gnu\"; popd"
