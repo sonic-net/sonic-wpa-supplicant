@@ -10,6 +10,7 @@
 #define SONIC_OPERATORS_H
 
 #include <swss/schema.h>
+#include <inttypes.h>
 
 #define SONIC_DB_SUCCESS (0)
 #define SONIC_DB_FAIL    (-1)
@@ -72,7 +73,7 @@ int sonic_db_get_counter(
     const char * table_name,
     const char * key,
     const char * field,
-    unsigned long long * counter);
+    uint64_t * counter);
 
 int sonic_db_del_counter(
     sonic_db_handle sonic_manager,

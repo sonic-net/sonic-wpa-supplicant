@@ -683,7 +683,7 @@ static int macsec_drv_get_receive_lowest_pn(void *priv, struct receive_sa *sa)
 
 	err = do_dump(drv, 0xff, mka_sci_u64(&sa->sc->sci), sa->an,
 		      &sa->lowest_pn);
-	wpa_printf(MSG_DEBUG, DRV_PREFIX "%s: result %lu", __func__,
+	wpa_printf(MSG_DEBUG, DRV_PREFIX "%s: result %" PRIu64 "", __func__,
 		   sa->lowest_pn);
 
 	return err;
@@ -705,7 +705,7 @@ static int macsec_drv_set_receive_lowest_pn(void *priv, struct receive_sa *sa)
 	int ret = -1;
 
 	wpa_printf(MSG_DEBUG,
-		   DRV_PREFIX "%s: set_receive_lowest_pn -> %d: %lu",
+		   DRV_PREFIX "%s: set_receive_lowest_pn -> %d: %" PRIu64 "",
 		   drv->ifname, sa->an, sa->next_pn);
 
 	msg = msg_prepare(MACSEC_CMD_UPD_RXSA, ctx, drv->ifi);
@@ -751,7 +751,7 @@ static int macsec_drv_get_transmit_next_pn(void *priv, struct transmit_sa *sa)
 	wpa_printf(MSG_DEBUG, "%s", __func__);
 
 	err = do_dump(drv, sa->an, UNUSED_SCI, 0xff, &sa->next_pn);
-	wpa_printf(MSG_DEBUG, DRV_PREFIX "%s: err %d result %lu", __func__, err,
+	wpa_printf(MSG_DEBUG, DRV_PREFIX "%s: err %d result %" PRIu64 "", __func__, err,
 		   sa->next_pn);
 	return err;
 }
@@ -771,7 +771,7 @@ static int macsec_drv_set_transmit_next_pn(void *priv, struct transmit_sa *sa)
 	struct nlattr *nest;
 	int ret = -1;
 
-	wpa_printf(MSG_DEBUG, "%s -> %d: %lu", __func__, sa->an, sa->next_pn);
+	wpa_printf(MSG_DEBUG, "%s -> %d: %" PRIu64 "", __func__, sa->an, sa->next_pn);
 
 	msg = msg_prepare(MACSEC_CMD_UPD_TXSA, ctx, drv->ifi);
 	if (!msg)
@@ -899,7 +899,7 @@ static int macsec_drv_create_receive_sa(void *priv, struct receive_sa *sa)
 
 	wpa_printf(MSG_DEBUG,
 		   DRV_PREFIX "%s: create_receive_sa -> %d on " SCISTR
-		   " (enable_receive=%d next_pn=%lu)",
+		   " (enable_receive=%d next_pn=%" PRIu64 ")",
 		   drv->ifname, sa->an,
 		   SCI2STR(sa->sc->sci.addr, sa->sc->sci.port),
 		   sa->enable_receive, sa->next_pn);
@@ -1215,7 +1215,7 @@ static int macsec_drv_create_transmit_sa(void *priv, struct transmit_sa *sa)
 	int ret = -1;
 
 	wpa_printf(MSG_DEBUG, DRV_PREFIX "%s: create_transmit_sa -> %d on "
-		   SCISTR " (enable_transmit=%d next_pn=%lu)",
+		   SCISTR " (enable_transmit=%d next_pn=%" PRIu64 ")",
 		   drv->ifname, sa->an,
 		   SCI2STR(sa->sc->sci.addr, sa->sc->sci.port),
 		   sa->enable_transmit, sa->next_pn);

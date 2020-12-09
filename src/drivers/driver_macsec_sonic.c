@@ -9,7 +9,6 @@
 
 #include "includes.h"
 
-#include <inttypes.h>
 #include <stdarg.h>
 
 #include <openssl/aes.h>

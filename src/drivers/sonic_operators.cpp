@@ -1,6 +1,5 @@
 #include "sonic_operators.h"
 
-#include <swss/schema.h>
 #include <swss/table.h>
 #include <swss/producerstatetable.h>
 #include <swss/dbconnector.h>
@@ -322,7 +321,7 @@ public:
         const std::string & table_name,
         const std::string & key,
         const std::string & field,
-        unsigned long long * counter)
+        uint64_t * counter)
     {
         std::vector<swss::FieldValueTuple> result;
         const std::string id = get_counter_id(key);
@@ -448,7 +447,7 @@ int sonic_db_get_counter(
     const char * table_name,
     const char * key,
     const char * field,
-    unsigned long long * counter)
+    uint64_t * counter)
 {
     sonic_db_manager * manager = reinterpret_cast<sonic_db_manager *>(sonic_manager);
     if (manager == nullptr)
