@@ -60,6 +60,8 @@ struct macsec_ciphersuite {
 	char name[32];
 	enum macsec_cap capable;
 	int sak_len; /* unit: byte */
+	u64 pn_exhaustion;
+	bool is_xpn;
 };
 
 struct mka_alg {

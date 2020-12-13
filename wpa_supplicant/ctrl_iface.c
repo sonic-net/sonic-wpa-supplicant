@@ -10472,6 +10472,11 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	} else if (os_strncmp(buf, "STATUS", 6) == 0) {
 		reply_len = wpa_supplicant_ctrl_iface_status(
 			wpa_s, buf + 6, reply, reply_size);
+#ifdef CONFIG_MACSEC
+	} else if (os_strncmp(buf, "MACSEC", 6) == 0) {
+		reply_len = ieee802_1x_kay_get_macsec(wpa_s->kay, reply,
+						      reply_size);
+#endif /* CONFIG_MACSEC */
 	} else if (os_strcmp(buf, "PMKSA") == 0) {
 		reply_len = wpas_ctrl_iface_pmksa(wpa_s, reply, reply_size);
 	} else if (os_strcmp(buf, "PMKSA_FLUSH") == 0) {

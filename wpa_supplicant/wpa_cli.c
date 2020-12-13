@@ -305,6 +305,16 @@ static int wpa_cli_cmd_status(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+#ifdef CONFIG_MACSEC
+static int wpa_cli_cmd_macsec(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	if (argc > 0 && os_strcmp(argv[0], "verbose") == 0)
+		return wpa_ctrl_command(ctrl, "MACSEC-VERBOSE");
+	return wpa_ctrl_command(ctrl, "MACSEC");
+}
+#endif /* CONFIG_MACSEC */
+
+
 static int wpa_cli_cmd_ping(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
 	return wpa_ctrl_command(ctrl, "PING");
@@ -1467,6 +1477,9 @@ static const char *network_fields[] = {
 #ifdef CONFIG_MACSEC
 	"macsec_policy",
 	"macsec_integ_only",
+	"macsec_ciphersuite",
+	"macsec_conf_offset",
+	"macsec_include_sci",
 	"macsec_replay_protect",
 	"macsec_replay_window",
 	"macsec_port",
@@ -3623,6 +3636,11 @@ static const struct wpa_cli_cmd wpa_cli_commands[] = {
 	  wpa_cli_complete_p2p_peer, cli_cmd_flag_none,
 	  "<address|iface=address> = remove a peer from all groups" },
 #endif /* CONFIG_P2P */
+#ifdef CONFIG_MACSEC
+	{ "macsec", wpa_cli_cmd_macsec, NULL,
+	  cli_cmd_flag_none,
+	  "[verbose] = get current MACsec status" },
+#endif /* CONFIG_MACSEC */
 	{ "vendor_elem_add", wpa_cli_cmd_vendor_elem_add, NULL,
 	  cli_cmd_flag_none,
 	  "<frame id> <hexdump of elem(s)> = add vendor specific IEs to frame(s)\n"

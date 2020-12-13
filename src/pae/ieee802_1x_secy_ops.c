@@ -511,7 +511,7 @@ int secy_init_macsec(struct ieee802_1x_kay *kay)
 
 	params.use_es = false;
 	params.use_scb = false;
-	params.always_include_sci = true;
+	params.always_include_sci = kay->macsec_include_sci;
 
 	ret = ops->macsec_init(ops->ctx, &params);
 

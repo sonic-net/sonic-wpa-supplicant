@@ -34,7 +34,7 @@
 
 struct cb_arg {
 	struct macsec_drv_data *drv;
-	u32 *pn;
+	u64 pn;
 	int ifindex;
 	u8 txsa;
 	u8 rxsa;
@@ -546,7 +546,7 @@ static int dump_callback(struct nl_msg *msg, void *argp)
 				continue;
 			if (!tb[MACSEC_SA_ATTR_PN])
 				return 0;
-			*arg->pn = nla_get_u32(tb[MACSEC_SA_ATTR_PN]);
+			arg->pn = nla_get_u32(tb[MACSEC_SA_ATTR_PN]);
 			return 0;
 		}
 
@@ -590,7 +590,7 @@ static int dump_callback(struct nl_msg *msg, void *argp)
 					continue;
 				if (!tb_sa[MACSEC_SA_ATTR_PN])
 					return 0;
-				*arg->pn =
+				arg->pn =
 					nla_get_u32(tb_sa[MACSEC_SA_ATTR_PN]);
 
 				return 0;
@@ -628,7 +628,7 @@ static int nl_send_recv(struct nl_sock *sk, struct nl_msg *msg)
 
 
 static int do_dump(struct macsec_drv_data *drv, u8 txsa, u64 rxsci, u8 rxsa,
-		   u32 *pn)
+		   u64 pn)
 {
 	struct macsec_genl_ctx *ctx = &drv->ctx;
 	struct nl_msg *msg;
@@ -660,8 +660,6 @@ static int do_dump(struct macsec_drv_data *drv, u8 txsa, u64 rxsci, u8 rxsa,
 			   DRV_PREFIX "failed to communicate: %d (%s)",
 			   ret, nl_geterror(-ret));
 
-	ctx->cb_arg.pn = NULL;
-
 out_free_msg:
 	nlmsg_free(msg);
 	return ret;
@@ -682,8 +680,8 @@ static int macsec_drv_get_receive_lowest_pn(void *priv, struct receive_sa *sa)
 	wpa_printf(MSG_DEBUG, DRV_PREFIX "%s", __func__);
 
 	err = do_dump(drv, 0xff, mka_sci_u64(&sa->sc->sci), sa->an,
-		      &sa->lowest_pn);
-	wpa_printf(MSG_DEBUG, DRV_PREFIX "%s: result %d", __func__,
+		      sa->lowest_pn);
+	wpa_printf(MSG_DEBUG, DRV_PREFIX "%s: result %" PRIu64 "", __func__,
 		   sa->lowest_pn);
 
 	return err;
@@ -705,7 +703,7 @@ static int macsec_drv_set_receive_lowest_pn(void *priv, struct receive_sa *sa)
 	int ret = -1;
 
 	wpa_printf(MSG_DEBUG,
-		   DRV_PREFIX "%s: set_receive_lowest_pn -> %d: %d",
+		   DRV_PREFIX "%s: set_receive_lowest_pn -> %d: %" PRIu64 "",
 		   drv->ifname, sa->an, sa->next_pn);
 
 	msg = msg_prepare(MACSEC_CMD_UPD_RXSA, ctx, drv->ifi);
@@ -720,7 +718,7 @@ static int macsec_drv_set_receive_lowest_pn(void *priv, struct receive_sa *sa)
 		goto nla_put_failure;
 
 	NLA_PUT_U8(msg, MACSEC_SA_ATTR_AN, sa->an);
-	NLA_PUT_U32(msg, MACSEC_SA_ATTR_PN, sa->next_pn);
+	NLA_PUT_U32(msg, MACSEC_SA_ATTR_PN, (u32)sa->next_pn);
 
 	nla_nest_end(msg, nest);
 
@@ -750,8 +748,8 @@ static int macsec_drv_get_transmit_next_pn(void *priv, struct transmit_sa *sa)
 
 	wpa_printf(MSG_DEBUG, "%s", __func__);
 
-	err = do_dump(drv, sa->an, UNUSED_SCI, 0xff, &sa->next_pn);
-	wpa_printf(MSG_DEBUG, DRV_PREFIX "%s: err %d result %d", __func__, err,
+	err = do_dump(drv, sa->an, UNUSED_SCI, 0xff, sa->next_pn);
+	wpa_printf(MSG_DEBUG, DRV_PREFIX "%s: err %d result %" PRIu64 "", __func__, err,
 		   sa->next_pn);
 	return err;
 }
@@ -771,7 +769,7 @@ static int macsec_drv_set_transmit_next_pn(void *priv, struct transmit_sa *sa)
 	struct nlattr *nest;
 	int ret = -1;
 
-	wpa_printf(MSG_DEBUG, "%s -> %d: %d", __func__, sa->an, sa->next_pn);
+	wpa_printf(MSG_DEBUG, "%s -> %d: %" PRIu64 "", __func__, sa->an, sa->next_pn);
 
 	msg = msg_prepare(MACSEC_CMD_UPD_TXSA, ctx, drv->ifi);
 	if (!msg)
@@ -782,7 +780,7 @@ static int macsec_drv_set_transmit_next_pn(void *priv, struct transmit_sa *sa)
 		goto nla_put_failure;
 
 	NLA_PUT_U8(msg, MACSEC_SA_ATTR_AN, sa->an);
-	NLA_PUT_U32(msg, MACSEC_SA_ATTR_PN, sa->next_pn);
+	NLA_PUT_U32(msg, MACSEC_SA_ATTR_PN, (u32)sa->next_pn);
 
 	nla_nest_end(msg, nest);
 
@@ -899,7 +897,7 @@ static int macsec_drv_create_receive_sa(void *priv, struct receive_sa *sa)
 
 	wpa_printf(MSG_DEBUG,
 		   DRV_PREFIX "%s: create_receive_sa -> %d on " SCISTR
-		   " (enable_receive=%d next_pn=%u)",
+		   " (enable_receive=%d next_pn=%" PRIu64 ")",
 		   drv->ifname, sa->an,
 		   SCI2STR(sa->sc->sci.addr, sa->sc->sci.port),
 		   sa->enable_receive, sa->next_pn);
@@ -922,7 +920,7 @@ static int macsec_drv_create_receive_sa(void *priv, struct receive_sa *sa)
 
 	NLA_PUT_U8(msg, MACSEC_SA_ATTR_AN, sa->an);
 	NLA_PUT_U8(msg, MACSEC_SA_ATTR_ACTIVE, sa->enable_receive);
-	NLA_PUT_U32(msg, MACSEC_SA_ATTR_PN, sa->next_pn);
+	NLA_PUT_U32(msg, MACSEC_SA_ATTR_PN, (u32)sa->next_pn);
 	NLA_PUT(msg, MACSEC_SA_ATTR_KEYID, sizeof(sa->pkey->key_identifier),
 		&sa->pkey->key_identifier);
 	NLA_PUT(msg, MACSEC_SA_ATTR_KEY, sa->pkey->key_len, sa->pkey->key);
@@ -1215,7 +1213,7 @@ static int macsec_drv_create_transmit_sa(void *priv, struct transmit_sa *sa)
 	int ret = -1;
 
 	wpa_printf(MSG_DEBUG, DRV_PREFIX "%s: create_transmit_sa -> %d on "
-		   SCISTR " (enable_transmit=%d next_pn=%u)",
+		   SCISTR " (enable_transmit=%d next_pn=%" PRIu64 ")",
 		   drv->ifname, sa->an,
 		   SCI2STR(sa->sc->sci.addr, sa->sc->sci.port),
 		   sa->enable_transmit, sa->next_pn);
@@ -1234,7 +1232,7 @@ static int macsec_drv_create_transmit_sa(void *priv, struct transmit_sa *sa)
 		goto nla_put_failure;
 
 	NLA_PUT_U8(msg, MACSEC_SA_ATTR_AN, sa->an);
-	NLA_PUT_U32(msg, MACSEC_SA_ATTR_PN, sa->next_pn);
+	NLA_PUT_U32(msg, MACSEC_SA_ATTR_PN, (u32)sa->next_pn);
 	NLA_PUT(msg, MACSEC_SA_ATTR_KEYID, sizeof(sa->pkey->key_identifier),
 		&sa->pkey->key_identifier);
 	NLA_PUT(msg, MACSEC_SA_ATTR_KEY, sa->pkey->key_len, sa->pkey->key);
