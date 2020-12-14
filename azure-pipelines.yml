@@ -14,16 +14,8 @@ pool:
 container:
   image: sonicdev-microsoft.azurecr.io:443/sonic-slave-buster:latest
 
-resources:
-  repositories:
-    - repository: SONiCSWSSCommon
-      type: github
-      name: Azure/sonic-swss-common
-      endpoint: sonic-wpa-supplicant
-
 steps:
 - checkout: self
-- checkout: SONiCSWSSCommon
 - script: |
     sudo apt-get install -qq -y \
       qtbase5-dev \
@@ -40,17 +32,17 @@ steps:
       libnl-nf-3-dev \
       swig3.0 \
       libpython2.7-dev
-  displayName: "Install Dependencies"
-- script: |
-    ./autogen.sh
-    dpkg-buildpackage -us -uc -b
-  workingDirectory: sonic-swss-common
-  displayName: "Compile SONiC SWSS Common"
+  displayName: "Install dependencies"
+- task: DownloadPipelineArtifact@2
+  inputs:
+    artifacts: sonic-swss-common
+  displayName: "Downlaod sonic swss common deb packages"
 - script: |
     sudo dpkg -i libswsscommon_1.0.0_amd64.deb
     sudo dpkg -i libswsscommon-dev_1.0.0_amd64.deb
-  displayName: "Install SONiC SWSS Common"
+  workingDirectory: $(Pipeline.Workspace)
+  displayName: "Install sonic swss Common"
 - script: |
     dpkg-buildpackage -us -uc -b
   workingDirectory: sonic-wpa-supplicant
-  displayName: "Compile SONiC WPA Supplicant"
+  displayName: "Compile sonic wpa supplicant"
