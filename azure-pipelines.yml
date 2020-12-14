@@ -36,8 +36,11 @@ steps:
 - task: DownloadPipelineArtifact@2
   inputs:
     artifacts: sonic-swss-common
-  displayName: "Downlaod sonic swss common deb packages"
+  displayName: "Download sonic swss common deb packages"
 - script: |
+    pwd
+    ls -l
+    ls -l ../
     sudo dpkg -i libswsscommon_1.0.0_amd64.deb
     sudo dpkg -i libswsscommon-dev_1.0.0_amd64.deb
   workingDirectory: $(Pipeline.Workspace)
