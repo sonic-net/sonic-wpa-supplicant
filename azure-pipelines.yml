@@ -39,6 +39,7 @@ steps:
   displayName: "Download sonic swss common deb packages"
 - script: |
     pwd
+    ls -l /home/vsts/work/1
     ls -l
     ls -l ../
     sudo dpkg -i libswsscommon_1.0.0_amd64.deb
