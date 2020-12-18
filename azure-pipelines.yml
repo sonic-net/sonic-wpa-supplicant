@@ -35,6 +35,9 @@ steps:
   displayName: "Install dependencies"
 - task: DownloadPipelineArtifact@2
   inputs:
+    source: specific
+    project: build
+    pipeline: 9
     artifacts: sonic-swss-common
   displayName: "Download sonic swss common deb packages"
 - script: |
