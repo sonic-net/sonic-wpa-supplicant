@@ -41,12 +41,8 @@ steps:
     artifacts: sonic-swss-common
   displayName: "Download sonic swss common deb packages"
 - script: |
-    pwd
-    ls -l /home/vsts/work/1
-    ls -l
-    ls -l ../
-    sudo dpkg -i libswsscommon_1.0.0_amd64.deb
-    sudo dpkg -i libswsscommon-dev_1.0.0_amd64.deb
+    sudo dpkg -i sonic-swss-common/libswsscommon_1.0.0_amd64.deb
+    sudo dpkg -i sonic-swss-common/libswsscommon-dev_1.0.0_amd64.deb
   workingDirectory: $(Pipeline.Workspace)
   displayName: "Install sonic swss Common"
 - script: |
