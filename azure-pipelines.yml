@@ -48,4 +48,8 @@ steps:
 - script: |
     ls -l
     dpkg-buildpackage -us -uc -b
+    cp ../*.deb .
   displayName: "Compile sonic wpa supplicant"
+- publish: $(System.DefaultWorkingDirectory)/
+  artifact: sonic-wpa-supplicant
+  displayName: "Archive sonic wpa supplicant debian packages"
