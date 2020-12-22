@@ -370,7 +370,7 @@ static int macsec_sonic_get_receive_lowest_pn(void *priv, struct receive_sa *sa)
         drv->sonic_manager,
         COUNTERS_TABLE,
         key,
-        "SAI_MACSEC_SA_ATTR_MINIMUM_XPN",
+        "SAI_MACSEC_SA_ATTR_CURRENT_XPN",
         &pn);
     PRINT_LOG("SA %s PN %" PRIu64 "", key, pn);
     if (ret == SONIC_DB_SUCCESS)
@@ -426,7 +426,7 @@ static int macsec_sonic_get_transmit_next_pn(void *priv, struct transmit_sa *sa)
         drv->sonic_manager,
         COUNTERS_TABLE,
         key,
-        "SAI_MACSEC_SA_ATTR_XPN",
+        "SAI_MACSEC_SA_ATTR_CURRENT_XPN",
         &pn);
     PRINT_LOG("SA %s PN %" PRIu64 "", key, pn);
     if (ret == SONIC_DB_SUCCESS)
@@ -494,7 +494,7 @@ static int macsec_sonic_create_receive_sc(void *priv, struct receive_sc *sc,
         validation);
     const struct sonic_db_name_value_pair pairs[] = 
     {
-        {"ssci", ""},
+        {"Null", "Null"},
     };
     // TODO 
     // Validation
@@ -590,7 +590,8 @@ static int macsec_sonic_create_receive_sa(void *priv, struct receive_sa *sa)
         {"sak", sak},
         {"auth_key", auth_key},
         {"lowest_acceptable_pn", pn},
-        {"salt", ""}
+        {"salt", ""},
+        {"ssci", ""}
     };
     int ret = sonic_db_set(
         drv->sonic_manager,
@@ -731,7 +732,6 @@ static int macsec_sonic_create_transmit_sc(
     // Validation
     const struct sonic_db_name_value_pair pairs[] = 
     {
-        {"ssci", ""},
         {"encoding_an", "0"},
     };
     int ret = sonic_db_set(
@@ -825,7 +825,8 @@ static int macsec_sonic_create_transmit_sa(void *priv, struct transmit_sa *sa)
         {"sak", sak},
         {"auth_key", auth_key},
         {"next_pn", pn},
-        {"salt", ""}
+        {"salt", ""},
+        {"ssci", ""}
     };
     int ret = sonic_db_set(
         drv->sonic_manager,
