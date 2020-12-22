@@ -861,6 +861,38 @@ struct wpa_ssid {
 	int macsec_integ_only;
 
 	/**
+	 * macsec_ciphersuite - Determines the ciphersuite for MACsec secure session
+	 *
+	 * 0: GCM-AES-128 (default)
+	 * 1: GCM-AES-256
+	 * 2: GCM-AES-XPN-128
+	 * 3: GCM-AES-XPN-256
+	 */
+	int macsec_ciphersuite;
+
+	/**
+	 * macsec_conf_offset - Determines the confidentiality offset for MACsec secure session
+	 *
+	 * 0: CONFIDENTIALITY_NONE (default)
+	 * 1: CONFIDENTIALITY_OFFSET_0
+	 * 2: CONFIDENTIALITY_OFFSET_30
+	 * 3: CONFIDENTIALITY_OFFSET_50
+	 */
+	int macsec_conf_offset;
+
+	/**
+	 * macsec_include_sci - Include SCI
+	 *
+	 * This setting applies only when MACsec is in use, i.e.,
+	 *  - macsec_policy is enabled
+	 *  - the key server has decided to enable MACsec
+	 *
+	 * 0: SCI not included (default)
+	 * 1: SCI included
+	 */
+	int macsec_include_sci;
+
+	/**
 	 * macsec_replay_protect - Enable MACsec replay protection
 	 *
 	 * This setting applies only when MACsec is in use, i.e.,

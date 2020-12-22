@@ -9,7 +9,6 @@
 
 #include "includes.h"
 
-#include <inttypes.h>
 #include <stdarg.h>
 
 #include <openssl/aes.h>
@@ -64,14 +63,14 @@ static char * create_buffer(const char * fmt, ...)
 #define CREATE_SC_KEY(IFNAME, SC, SEPARATOR)    \
     create_buffer(                              \
         "%s"                                    \
-        SEPARATOR "%llu",                       \
+        SEPARATOR "%" PRIu64 "",                \
         IFNAME,                                 \
         mka_sci_u64(&SC->sci))
 
 #define CREATE_SA_KEY(IFNAME, SA, SEPARATOR)    \
     create_buffer(                              \
         "%s"                                    \
-        SEPARATOR "%llu"                        \
+        SEPARATOR "%" PRIu64 "",                \
         SEPARATOR "%u",                         \
         IFNAME,                                 \
         mka_sci_u64(&SA->sc->sci),              \
@@ -366,14 +365,14 @@ static int macsec_sonic_get_receive_lowest_pn(void *priv, struct receive_sa *sa)
     struct macsec_sonic_data *drv = priv;
 
     char * key = CREATE_SA_KEY(drv->ifname, sa, APP_DB_SEPARATOR);
-    unsigned long long pn = 1;
+    u64 pn = 1;
     int ret = sonic_db_get_counter(
         drv->sonic_manager,
         COUNTERS_TABLE,
         key,
         "SAI_MACSEC_SA_ATTR_MINIMUM_XPN",
         &pn);
-    PRINT_LOG("SA %s PN %llu", key, pn);
+    PRINT_LOG("SA %s PN %" PRIu64 "", key, pn);
     if (ret == SONIC_DB_SUCCESS)
     {
         sa->lowest_pn = pn;
@@ -393,8 +392,8 @@ static int macsec_sonic_set_receive_lowest_pn(void *priv, struct receive_sa *sa)
     struct macsec_sonic_data *drv = priv;
 
     char * key = CREATE_SA_KEY(drv->ifname, sa, APP_DB_SEPARATOR);
-    PRINT_LOG("%s - %u", key, sa->lowest_pn);
-    char * buffer = create_buffer("%u", sa->lowest_pn);
+    PRINT_LOG("%s - %" PRIu64 "", key, sa->lowest_pn);
+    char * buffer = create_buffer("%" PRIu64 "", sa->lowest_pn);
     const struct sonic_db_name_value_pair pairs[] = 
     {
         {"lowest_acceptable_pn", buffer}
@@ -422,14 +421,14 @@ static int macsec_sonic_get_transmit_next_pn(void *priv, struct transmit_sa *sa)
     struct macsec_sonic_data *drv = priv;
 
     char * key = CREATE_SA_KEY(drv->ifname, sa, APP_DB_SEPARATOR);
-    unsigned long long pn = 1;
+    u64 pn = 1;
     int ret = sonic_db_get_counter(
         drv->sonic_manager,
         COUNTERS_TABLE,
         key,
         "SAI_MACSEC_SA_ATTR_XPN",
         &pn);
-    PRINT_LOG("SA %s PN %llu", key, pn);
+    PRINT_LOG("SA %s PN %" PRIu64 "", key, pn);
     if (ret == SONIC_DB_SUCCESS)
     {
         sa->next_pn = pn;
@@ -450,8 +449,8 @@ static int macsec_sonic_set_transmit_next_pn(void *priv, struct transmit_sa *sa)
     struct macsec_sonic_data *drv = priv;
 
     char * key = CREATE_SA_KEY(drv->ifname, sa, APP_DB_SEPARATOR);
-    PRINT_LOG("%s - %u", key, sa->next_pn);
-    char * buffer = create_buffer("%u", sa->next_pn);
+    PRINT_LOG("%s - %" PRIu64 "", key, sa->next_pn);
+    char * buffer = create_buffer("%" PRIu64 "", sa->next_pn);
     const struct sonic_db_name_value_pair pairs[] = 
     {
         {"init_pn", buffer}
@@ -574,9 +573,9 @@ static int macsec_sonic_create_receive_sa(void *priv, struct receive_sa *sa)
     char * key = CREATE_SA_KEY(drv->ifname, sa, APP_DB_SEPARATOR);
     char * sak_id = create_binary_hex(&sa->pkey->key_identifier, sizeof(sa->pkey->key_identifier));
     char * sak = create_binary_hex(sa->pkey->key, sa->pkey->key_len);
-    char * pn = create_buffer("%u", sa->lowest_pn);
+    char * pn = create_buffer("%" PRIu64 "", sa->lowest_pn);
     char * auth_key = create_auth_key(sa->pkey->key, sa->pkey->key_len);
-    PRINT_LOG("%s (enable_receive=%d next_pn=%u) %s %s",
+    PRINT_LOG("%s (enable_receive=%d next_pn=%" PRIu64 ") %s %s",
         key,
         sa->enable_receive,
         sa->lowest_pn,
@@ -810,9 +809,9 @@ static int macsec_sonic_create_transmit_sa(void *priv, struct transmit_sa *sa)
     char * key = CREATE_SA_KEY(drv->ifname, sa, APP_DB_SEPARATOR);
     char * sak_id = create_binary_hex(&sa->pkey->key_identifier, sizeof(sa->pkey->key_identifier));
     char * sak = create_binary_hex(sa->pkey->key, sa->pkey->key_len);
-    char * pn = create_buffer("%u", sa->next_pn);
+    char * pn = create_buffer("%" PRIu64 "", sa->next_pn);
     char * auth_key = create_auth_key(sa->pkey->key, sa->pkey->key_len);
-    PRINT_LOG("%s (enable_receive=%d next_pn=%u) %s %s",
+    PRINT_LOG("%s (enable_receive=%d next_pn=%" PRIu64 ") %s %s",
         key,
         sa->enable_transmit,
         sa->next_pn,

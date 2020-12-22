@@ -30,7 +30,8 @@
 #define MAX_MISSING_SAK_USE 10  /* Accept up to 10 inbound MKPDUs without
 				 * SAK-USE before dropping */
 
-#define PENDING_PN_EXHAUSTION 0xC0000000
+#define PENDING_PN_EXHAUSTION  0x00000000C0000000ULL
+#define PENDING_XPN_EXHAUSTION 0xC000000000000000ULL
 
 #define MKA_ALIGN_LENGTH(len) (((len) + 0x3) & ~0x3)
 
@@ -46,13 +47,35 @@ static struct macsec_ciphersuite cipher_suite_tbl[] = {
 		.name = CS_NAME_GCM_AES_128,
 		.capable = MACSEC_CAP_INTEG_AND_CONF_0_30_50,
 		.sak_len = DEFAULT_SA_KEY_LEN,
+		.pn_exhaustion = PENDING_PN_EXHAUSTION,
+		.is_xpn = false,
 	},
 	/* GCM-AES-256 */
 	{
 		.id = CS_ID_GCM_AES_256,
 		.name = CS_NAME_GCM_AES_256,
 		.capable = MACSEC_CAP_INTEG_AND_CONF_0_30_50,
-		.sak_len = 32,
+		.sak_len = DEFAULT_SA_KEY_LEN * 2,
+		.pn_exhaustion = PENDING_PN_EXHAUSTION,
+		.is_xpn = false,
+	},
+	/* GCM-AES-XPN-128 */
+	{
+		.id = CS_ID_GCM_AES_XPN_128,
+		.name = CS_NAME_GCM_AES_XPN_128,
+		.capable = MACSEC_CAP_INTEG_AND_CONF,
+		.sak_len = DEFAULT_SA_KEY_LEN,
+		.pn_exhaustion = PENDING_XPN_EXHAUSTION,
+		.is_xpn = true,
+	},
+	/* GCM-AES-XPN-256 */
+	{
+		.id = CS_ID_GCM_AES_XPN_256,
+		.name = CS_NAME_GCM_AES_XPN_256,
+		.capable = MACSEC_CAP_INTEG_AND_CONF,
+		.sak_len = DEFAULT_SA_KEY_LEN * 2,
+		.pn_exhaustion = PENDING_XPN_EXHAUSTION,
+		.is_xpn = true,
 	},
 };
 #define CS_TABLE_SIZE (ARRAY_SIZE(cipher_suite_tbl))
@@ -133,6 +156,31 @@ static const char * algo_agility_txt(const u8 *algo_agility)
 
 
 /**
+ * ieee802_1x_kay_get_cipher_suite
+ */
+static struct macsec_ciphersuite *
+ieee802_1x_kay_get_cipher_suite(struct ieee802_1x_mka_participant *participant,
+				const u8 *cs_id, unsigned int *idx)
+{
+	unsigned int i;
+	u64 cs;
+	be64 _cs;
+
+	os_memcpy(&_cs, cs_id, CS_ID_LEN);
+	cs = be_to_host64(_cs);
+
+	for (i = 0; i < CS_TABLE_SIZE; i++) {
+		if (cipher_suite_tbl[i].id == cs) {
+			*idx = i;
+			return &cipher_suite_tbl[i];
+		}
+	}
+
+	return NULL;
+}
+
+
+/**
  * ieee802_1x_mka_dump_basic_body -
  */
 static void
@@ -205,6 +253,8 @@ static void
 ieee802_1x_mka_dump_dist_sak_body(struct ieee802_1x_mka_dist_sak_body *body)
 {
 	size_t body_len;
+	struct macsec_ciphersuite *cs;
+	u8 *wrap_sak;
 
 	if (body == NULL)
 		return;
@@ -221,8 +271,22 @@ ieee802_1x_mka_dump_dist_sak_body(struct ieee802_1x_mka_dist_sak_body *body)
 
 	wpa_printf(MSG_DEBUG, "\tKey Number............: %d",
 		   be_to_host32(body->kn));
-	/* TODO: Other than GCM-AES-128 case: MACsec Cipher Suite */
-	wpa_hexdump(MSG_DEBUG, "\tAES Key Wrap of SAK...:", body->sak, 24);
+	if (body_len == 28) {
+		cs = &cipher_suite_tbl[DEFAULT_CS_INDEX];
+		wrap_sak = body->sak;
+	} else {
+		unsigned int idx;
+		cs = ieee802_1x_kay_get_cipher_suite(NULL, body->sak, &idx);
+		wrap_sak = body->sak + CS_ID_LEN;
+		if (!cs) {
+			wpa_printf(MSG_ERROR,
+				   "KaY: I can't support the Cipher Suite advised by key server");
+			cs = &cipher_suite_tbl[DEFAULT_CS_INDEX];
+			wrap_sak = body->sak;
+		}
+	}
+	wpa_printf(MSG_DEBUG, "\tCipher Suite..........: %s", cs->name);
+	wpa_hexdump(MSG_DEBUG, "\tAES Key Wrap of SAK...:", wrap_sak, cs->sak_len);
 }
 
 
@@ -387,31 +451,6 @@ ieee802_1x_kay_get_peer(struct ieee802_1x_mka_participant *participant,
 		return peer;
 
 	return ieee802_1x_kay_get_potential_peer(participant, mi);
-}
-
-
-/**
- * ieee802_1x_kay_get_cipher_suite
- */
-static struct macsec_ciphersuite *
-ieee802_1x_kay_get_cipher_suite(struct ieee802_1x_mka_participant *participant,
-				const u8 *cs_id, unsigned int *idx)
-{
-	unsigned int i;
-	u64 cs;
-	be64 _cs;
-
-	os_memcpy(&_cs, cs_id, CS_ID_LEN);
-	cs = be_to_host64(_cs);
-
-	for (i = 0; i < CS_TABLE_SIZE; i++) {
-		if (cipher_suite_tbl[i].id == cs) {
-			*idx = i;
-			return &cipher_suite_tbl[i];
-		}
-	}
-
-	return NULL;
 }
 
 
@@ -610,6 +649,8 @@ ieee802_1x_kay_create_live_peer(struct ieee802_1x_mka_participant *participant,
 {
 	struct ieee802_1x_kay_peer *peer;
 	struct receive_sc *rxsc;
+	struct receive_sc *new_rxsc;
+	bool found = false;
 
 	peer = ieee802_1x_kay_create_peer(mi, mn);
 	if (!peer)
@@ -618,19 +659,31 @@ ieee802_1x_kay_create_live_peer(struct ieee802_1x_mka_participant *participant,
 	os_memcpy(&peer->sci, &participant->current_peer_sci,
 		  sizeof(peer->sci));
 
-	rxsc = ieee802_1x_kay_init_receive_sc(&peer->sci);
-	if (!rxsc) {
+	new_rxsc = ieee802_1x_kay_init_receive_sc(&peer->sci);
+	if (!new_rxsc) {
 		os_free(peer);
 		return NULL;
 	}
 
-	if (secy_create_receive_sc(participant->kay, rxsc)) {
-		os_free(rxsc);
+	if (secy_create_receive_sc(participant->kay, new_rxsc)) {
+		os_free(new_rxsc);
 		os_free(peer);
 		return NULL;
 	}
 	dl_list_add(&participant->live_peers, &peer->list);
-	dl_list_add(&participant->rxsc_list, &rxsc->list);
+	/* Keep rxsc_list sorted by SCI */
+	dl_list_for_each(rxsc, &participant->rxsc_list, struct receive_sc,
+			 list) {
+		if (os_memcmp(&new_rxsc->sci, &rxsc->sci,
+			      sizeof(struct ieee802_1x_mka_sci)) > 0) {
+			dl_list_add(&rxsc->list, &new_rxsc->list);
+			found = true;
+			break;
+		}
+	}
+	if (!found) {
+		dl_list_add(&participant->rxsc_list, &new_rxsc->list);
+	}
 
 	wpa_printf(MSG_DEBUG, "KaY: Live peer created");
 	ieee802_1x_kay_dump_peer(peer);
@@ -670,13 +723,15 @@ ieee802_1x_kay_move_live_peer(struct ieee802_1x_mka_participant *participant,
 {
 	struct ieee802_1x_kay_peer *peer;
 	struct receive_sc *rxsc;
+	struct receive_sc *new_rxsc;
+	bool found = false;
 
 	peer = ieee802_1x_kay_get_potential_peer(participant, mi);
 	if (!peer)
 		return NULL;
 
-	rxsc = ieee802_1x_kay_init_receive_sc(&participant->current_peer_sci);
-	if (!rxsc)
+	new_rxsc = ieee802_1x_kay_init_receive_sc(&participant->current_peer_sci);
+	if (!new_rxsc)
 		return NULL;
 
 	os_memcpy(&peer->sci, &participant->current_peer_sci,
@@ -688,15 +743,27 @@ ieee802_1x_kay_move_live_peer(struct ieee802_1x_mka_participant *participant,
 	ieee802_1x_kay_dump_peer(peer);
 
 	dl_list_del(&peer->list);
-	if (secy_create_receive_sc(participant->kay, rxsc)) {
+	if (secy_create_receive_sc(participant->kay, new_rxsc)) {
 		wpa_printf(MSG_ERROR, "KaY: Can't create SC, discard peer");
-		os_free(rxsc);
+		os_free(new_rxsc);
 		os_free(peer);
 		return NULL;
 	}
 	dl_list_add_tail(&participant->live_peers, &peer->list);
 
-	dl_list_add(&participant->rxsc_list, &rxsc->list);
+	/* Keep rxsc_list sorted by SCI */
+	dl_list_for_each(rxsc, &participant->rxsc_list, struct receive_sc,
+			 list) {
+		if (os_memcmp(&new_rxsc->sci, &rxsc->sci,
+			      sizeof(struct ieee802_1x_mka_sci)) > 0) {
+			dl_list_add(&rxsc->list, &new_rxsc->list);
+			found = true;
+			break;
+		}
+	}
+	if (!found) {
+		dl_list_add(&participant->rxsc_list, &new_rxsc->list);
+	}
 
 	return peer;
 }
@@ -1766,6 +1833,7 @@ ieee802_1x_mka_decode_dist_sak_body(
 		wrap_sak =  body->sak;
 		kay->macsec_csindex = DEFAULT_CS_INDEX;
 		cs = &cipher_suite_tbl[kay->macsec_csindex];
+		kay->macsec_cs_id = cs->id;
 	} else {
 		unsigned int idx;
 
@@ -1801,7 +1869,7 @@ ieee802_1x_mka_decode_dist_sak_body(
 		return -1;
 	}
 
-	os_memcpy(&sa_key->key_identifier.mi, &participant->current_peer_id.mi,
+	os_memcpy(sa_key->key_identifier.mi, participant->current_peer_id.mi,
 		  MI_LEN);
 	sa_key->key_identifier.kn = be_to_host32(body->kn);
 
@@ -1810,6 +1878,13 @@ ieee802_1x_mka_decode_dist_sak_body(
 
 	sa_key->confidentiality_offset = body->confid_offset;
 	sa_key->an = body->dan;
+	if (cs->is_xpn) {
+		os_memcpy(sa_key->salt, sa_key->key_identifier.mi, MI_LEN);
+		sa_key->salt[0] ^= (sa_key->key_identifier.kn >> 8) & 0xff;
+		sa_key->salt[1] ^= (sa_key->key_identifier.kn) & 0xff;
+		sa_key->salt[2] ^= (sa_key->key_identifier.kn >> 24) & 0xff;
+		sa_key->salt[3] ^= (sa_key->key_identifier.kn >> 16) & 0xff;
+	}
 	ieee802_1x_kay_init_data_key(sa_key);
 
 	ieee802_1x_kay_use_data_key(sa_key);
@@ -2211,6 +2286,13 @@ ieee802_1x_kay_generate_new_sak(struct ieee802_1x_mka_participant *participant)
 
 	sa_key->confidentiality_offset = kay->macsec_confidentiality;
 	sa_key->an = kay->dist_an;
+	if (cs->is_xpn) {
+		os_memcpy(sa_key->salt, &sa_key->key_identifier.mi, MI_LEN);
+		sa_key->salt[0] ^= (sa_key->key_identifier.kn >> 8) & 0xff;
+		sa_key->salt[1] ^= (sa_key->key_identifier.kn) & 0xff;
+		sa_key->salt[2] ^= (sa_key->key_identifier.kn >> 24) & 0xff;
+		sa_key->salt[3] ^= (sa_key->key_identifier.kn >> 16) & 0xff;
+	}
 	ieee802_1x_kay_init_data_key(sa_key);
 
 	participant->new_key = sa_key;
@@ -2875,6 +2957,7 @@ int ieee802_1x_kay_create_sas(struct ieee802_1x_kay *kay,
 	struct receive_sc *rxsc;
 	struct receive_sa *rxsa;
 	struct transmit_sa *txsa;
+	struct macsec_ciphersuite *cs;
 
 	principal = ieee802_1x_kay_get_principal_participant(kay);
 	if (!principal)
@@ -2895,6 +2978,22 @@ int ieee802_1x_kay_create_sas(struct ieee802_1x_kay *kay,
 	if (!latest_sak) {
 		wpa_printf(MSG_ERROR, "KaY: lki related sak not found");
 		return -1;
+	}
+
+	cs = &cipher_suite_tbl[kay->macsec_csindex];
+	if (cs->is_xpn) {
+		/* Calculate SSCIs */
+		u32 ssci = dl_list_len(&principal->rxsc_list) + 1;
+		dl_list_for_each(rxsc, &principal->rxsc_list, struct receive_sc, list) {
+			if (os_memcmp(&rxsc->sci, &principal->txsc->sci,
+				      sizeof(struct ieee802_1x_mka_sci)) > 0) {
+				principal->txsc->ssci = ssci--;
+			}
+			rxsc->ssci = ssci--;
+		}
+		if (ssci) {
+			principal->txsc->ssci = ssci--;
+		}
 	}
 
 	dl_list_for_each(rxsc, &principal->rxsc_list, struct receive_sc, list) {
@@ -3455,6 +3554,8 @@ static void kay_l2_receive(void *ctx, const u8 *src_addr, const u8 *buf,
  */
 struct ieee802_1x_kay *
 ieee802_1x_kay_init(struct ieee802_1x_kay_ctx *ctx, enum macsec_policy policy,
+		    int macsec_ciphersuite, enum confidentiality_offset macsec_offset,
+		    bool macsec_include_sci,
 		    bool macsec_replay_protect, u32 macsec_replay_window,
 		    u16 port, u8 priority, const char *ifname, const u8 *addr)
 {
@@ -3492,8 +3593,9 @@ ieee802_1x_kay_init(struct ieee802_1x_kay_ctx *ctx, enum macsec_policy policy,
 	kay->dist_an = 0;
 	kay->dist_time = 0;
 
-	kay->pn_exhaustion = PENDING_PN_EXHAUSTION;
-	kay->macsec_csindex = DEFAULT_CS_INDEX;
+	kay->macsec_csindex = macsec_ciphersuite;
+	kay->macsec_cs_id = cipher_suite_tbl[kay->macsec_csindex].id;
+	kay->pn_exhaustion = cipher_suite_tbl[kay->macsec_csindex].pn_exhaustion;
 	kay->mka_algindex = DEFAULT_MKA_ALG_INDEX;
 	kay->mka_version = MKA_VERSION_ID;
 
@@ -3514,6 +3616,7 @@ ieee802_1x_kay_init(struct ieee802_1x_kay_ctx *ctx, enum macsec_policy policy,
 		kay->macsec_encrypt = false;
 		kay->macsec_validate = Disabled;
 		kay->macsec_replay_protect = false;
+		kay->macsec_include_sci = false;
 		kay->macsec_replay_window = 0;
 		kay->macsec_confidentiality = CONFIDENTIALITY_NONE;
 		kay->mka_hello_time = MKA_HELLO_TIME;
@@ -3523,12 +3626,13 @@ ieee802_1x_kay_init(struct ieee802_1x_kay_ctx *ctx, enum macsec_policy policy,
 		if (kay->macsec_capable >= MACSEC_CAP_INTEG_AND_CONF &&
 		    policy == SHOULD_ENCRYPT) {
 			kay->macsec_encrypt = true;
-			kay->macsec_confidentiality = CONFIDENTIALITY_OFFSET_0;
+			kay->macsec_confidentiality = macsec_offset;
 		} else { /* SHOULD_SECURE */
 			kay->macsec_encrypt = false;
 			kay->macsec_confidentiality = CONFIDENTIALITY_NONE;
 		}
 		kay->macsec_validate = Strict;
+		kay->macsec_include_sci = macsec_include_sci;
 		kay->macsec_replay_protect = macsec_replay_protect;
 		kay->macsec_replay_window = macsec_replay_window;
 		kay->mka_hello_time = MKA_HELLO_TIME;
@@ -3729,6 +3833,7 @@ ieee802_1x_kay_create_mka(struct ieee802_1x_kay *kay,
 	dl_list_init(&participant->rxsc_list);
 	participant->txsc = ieee802_1x_kay_init_transmit_sc(&kay->actor_sci);
 	secy_cp_control_protect_frames(kay, kay->macsec_protect);
+	secy_cp_control_current_cipher_suite(kay, kay->macsec_cs_id);
 	secy_cp_control_replay(kay, kay->macsec_replay_protect,
 			       kay->macsec_replay_window);
 	if (secy_create_transmit_sc(kay, participant->txsc))
@@ -3918,6 +4023,7 @@ ieee802_1x_kay_change_cipher_suite(struct ieee802_1x_kay *kay,
 		kay->macsec_desired = false;
 
 	kay->macsec_csindex = cs_index;
+	kay->macsec_cs_id = cipher_suite_tbl[kay->macsec_csindex].id;
 	kay->macsec_capable = cipher_suite_tbl[kay->macsec_csindex].capable;
 
 	if (secy_get_capability(kay, &secy_cap) < 0)
@@ -3984,19 +4090,19 @@ int ieee802_1x_kay_get_status(struct ieee802_1x_kay *kay, char *buf,
 			  kay->dist_kn - 1,
 			  kay->rcvd_keys,
 			  kay->mka_hello_time);
-	if (os_snprintf_error(buflen, res))
+	if (os_snprintf_error(end - pos, res))
 		return 0;
 	pos += res;
 
 	res = os_snprintf(pos, end - pos,
 			  "actor_sci=%s\n", sci_txt(&kay->actor_sci));
-	if (os_snprintf_error(buflen, res))
+	if (os_snprintf_error(end - pos, res))
 		return end - pos;
 	pos += res;
 
 	res = os_snprintf(pos, end - pos,
 			  "key_server_sci=%s\n", sci_txt(&kay->key_server_sci));
-	if (os_snprintf_error(buflen, res))
+	if (os_snprintf_error(end - pos, res))
 		return end - pos;
 	pos += res;
 
@@ -4007,7 +4113,7 @@ int ieee802_1x_kay_get_status(struct ieee802_1x_kay *kay, char *buf,
 
 		res = os_snprintf(pos2, end - pos2, "participant_idx=%d\nckn=",
 			count);
-		if (os_snprintf_error(buflen, res))
+		if (os_snprintf_error(end - pos2, res))
 			return end - pos;
 		pos2 += res;
 		count++;
@@ -4033,9 +4139,103 @@ int ieee802_1x_kay_get_status(struct ieee802_1x_kay *kay, char *buf,
 				  dl_list_len(&p->potential_peers),
 				  yes_no(p->is_key_server),
 				  yes_no(p->is_elected));
-		if (os_snprintf_error(buflen, res))
+		if (os_snprintf_error(end - pos2, res))
 			return end - pos;
 		pos2 += res;
+		pos = pos2;
+	}
+
+	return pos - buf;
+}
+
+/**
+ * ieee802_1x_kay_get_macsec - Get IEEE 802.1X KaY MACsec details
+ * @sm: Pointer to KaY allocated with ieee802_1x_kay_init()
+ * @buf: Buffer for status information
+ * @buflen: Maximum buffer length
+ * @verbose: Whether to include verbose status information
+ * Returns: Number of bytes written to buf.
+ *
+ * Query KaY status information. This function fills in a text area with current
+ * MACsec information. If the buffer (buf) is not large enough, MACsec
+ * information will be truncated to fit the buffer.
+ */
+int ieee802_1x_kay_get_macsec(struct ieee802_1x_kay *kay, char *buf,
+			      size_t buflen)
+{
+	char *pos, *end;
+	int res;
+	struct ieee802_1x_mka_participant *p;
+
+	if (!kay)
+		return 0;
+
+	pos = buf;
+	end = buf + buflen;
+
+	res = os_snprintf(pos, end - pos, "Cipher Suite: %s\tEncryption: %s\n",
+			  cipher_suite_tbl[kay->macsec_csindex].name,
+			  yes_no(kay->macsec_encrypt));
+	if (os_snprintf_error(buflen, res))
+		return end - pos;
+	pos += res;
+
+	res = os_snprintf(pos, end - pos, "Include SCI: %s\n",
+			  yes_no(kay->macsec_include_sci));
+	if (os_snprintf_error(end - pos, res))
+		return end - pos;
+	pos += res;
+
+	res = os_snprintf(pos, end - pos, "Replay Protect: %s\tReplay Window: %u\n",
+			  yes_no(kay->macsec_replay_protect), kay->macsec_replay_window);
+	if (os_snprintf_error(end - pos, res))
+		return end - pos;
+	pos += res;
+
+	dl_list_for_each(p, &kay->participant_list,
+			 struct ieee802_1x_mka_participant, list) {
+		struct receive_sc *rxsc;
+		struct transmit_sa *txsa;
+		struct receive_sa *rxsa;
+		char *pos2 = pos;
+
+		if (p->txsc) {
+			res = os_snprintf(pos2, end - pos2, "\tTXSC: %s\n",
+					  sci_txt(&p->txsc->sci));
+			if (os_snprintf_error(end - pos2, res))
+				return end - pos;
+			pos2 += res;
+
+			dl_list_for_each(txsa, &p->txsc->sa_list,
+					 struct transmit_sa, list) {
+				res = os_snprintf(pos2, end - pos2,
+						  "\t\tAN: %u\tActive: %s\tPN: %lu\n",
+						  txsa->an, yes_no(txsa->in_use),
+						  txsa->next_pn);
+				if (os_snprintf_error(end - pos2, res))
+					return end - pos;
+				pos2 += res;
+			}
+		}
+		dl_list_for_each(rxsc, &p->rxsc_list, struct receive_sc, list) {
+			res = os_snprintf(pos2, end - pos2, "\tRXSC: %s\n",
+					  sci_txt(&rxsc->sci));
+			if (os_snprintf_error(end - pos2, res))
+				return end - pos;
+			pos2 += res;
+
+			dl_list_for_each(rxsa, &rxsc->sa_list, struct receive_sa,
+					 list) {
+				res = os_snprintf(pos2, end - pos2,
+						  "\t\tAN: %u\tActive: %s\tPN: %lu\n",
+						  rxsa->an, yes_no(rxsa->in_use),
+						  rxsa->next_pn);
+				if (os_snprintf_error(end - pos2, res))
+					return end - pos;
+				pos2 += res;
+			}
+		}
+
 		pos = pos2;
 	}
 
