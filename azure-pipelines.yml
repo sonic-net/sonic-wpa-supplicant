@@ -9,7 +9,7 @@ trigger:
       - "*"
 
 pool:
-  vmImage: 'ubuntu-latest'
+  vmImage: 'ubuntu-20.04'
 
 container:
   image: sonicdev-microsoft.azurecr.io:443/sonic-slave-buster:latest
@@ -47,8 +47,7 @@ steps:
 - checkout: self
 - script: |
     ls -l
-    dpkg-buildpackage -us -uc -b
-    cp ../*.deb .
+    dpkg-buildpackage -us -uc -b && cp ../*.deb .
   displayName: "Compile sonic wpa supplicant"
 - publish: $(System.DefaultWorkingDirectory)/
   artifact: sonic-wpa-supplicant
