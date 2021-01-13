@@ -8,6 +8,7 @@
 
 #include <time.h>
 #include "includes.h"
+#include "inttypes.h"
 #include "common.h"
 #include "list.h"
 #include "eloop.h"
@@ -4209,7 +4210,7 @@ int ieee802_1x_kay_get_macsec(struct ieee802_1x_kay *kay, char *buf,
 			dl_list_for_each(txsa, &p->txsc->sa_list,
 					 struct transmit_sa, list) {
 				res = os_snprintf(pos2, end - pos2,
-						  "\t\tAN: %u\tActive: %s\tPN: %lu\n",
+						  "\t\tAN: %u\tActive: %s\tPN: %" PRIu64 "\n",
 						  txsa->an, yes_no(txsa->in_use),
 						  txsa->next_pn);
 				if (os_snprintf_error(end - pos2, res))
@@ -4227,7 +4228,7 @@ int ieee802_1x_kay_get_macsec(struct ieee802_1x_kay *kay, char *buf,
 			dl_list_for_each(rxsa, &rxsc->sa_list, struct receive_sa,
 					 list) {
 				res = os_snprintf(pos2, end - pos2,
-						  "\t\tAN: %u\tActive: %s\tPN: %lu\n",
+						  "\t\tAN: %u\tActive: %s\tPN: %" PRIu64 "\n",
 						  rxsa->an, yes_no(rxsa->in_use),
 						  rxsa->next_pn);
 				if (os_snprintf_error(end - pos2, res))
