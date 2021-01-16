@@ -8,47 +8,151 @@ trigger:
     include:
       - "*"
 
-pool:
-  vmImage: 'ubuntu-20.04'
+jobs:
+- job:
+  displayName: "amd64"
+  pool:
+    vmImage: 'ubuntu-20.04'
 
-container:
-  image: sonicdev-microsoft.azurecr.io:443/sonic-slave-buster:latest
+  container:
+    image: sonicdev-microsoft.azurecr.io:443/sonic-slave-buster:latest
 
-steps:
-- script: |
-    sudo apt-get install -qq -y \
-      qtbase5-dev \
-      libdbus-glib-1-2 \
-      libdbus-glib-1-dev \
-      libpcsclite-dev \
-      docbook-to-man \
-      docbook-utils \
-      aspell-en \
-      libhiredis-dev \
-      libnl-3-dev \
-      libnl-genl-3-dev \
-      libnl-route-3-dev \
-      libnl-nf-3-dev \
-      swig3.0 \
-      libpython2.7-dev
-  displayName: "Install dependencies"
-- task: DownloadPipelineArtifact@2
-  inputs:
-    source: specific
-    project: build
-    pipeline: 9
-    artifacts: sonic-swss-common
-  displayName: "Download sonic swss common deb packages"
-- script: |
-    sudo dpkg -i sonic-swss-common/libswsscommon_1.0.0_amd64.deb
-    sudo dpkg -i sonic-swss-common/libswsscommon-dev_1.0.0_amd64.deb
-  workingDirectory: $(Pipeline.Workspace)
-  displayName: "Install sonic swss Common"
-- checkout: self
-- script: |
-    ls -l
-    dpkg-buildpackage -us -uc -b && cp ../*.deb .
-  displayName: "Compile sonic wpa supplicant"
-- publish: $(System.DefaultWorkingDirectory)/
-  artifact: sonic-wpa-supplicant
-  displayName: "Archive sonic wpa supplicant debian packages"
+  steps:
+  - script: |
+      sudo apt-get install -qq -y \
+        qtbase5-dev \
+        libdbus-glib-1-2 \
+        libdbus-glib-1-dev \
+        libpcsclite-dev \
+        docbook-to-man \
+        docbook-utils \
+        aspell-en \
+        libhiredis-dev \
+        libnl-3-dev \
+        libnl-genl-3-dev \
+        libnl-route-3-dev \
+        libnl-nf-3-dev \
+        swig3.0 \
+        libpython2.7-dev
+    displayName: "Install dependencies"
+  - task: DownloadPipelineArtifact@2
+    inputs:
+      source: specific
+      project: build
+      pipeline: 9
+      artifacts: sonic-swss-common
+      runVersion: 'latestFromBranch'
+      runBranch: 'refs/heads/master'
+    displayName: "Download sonic swss common deb packages"
+  - script: |
+      sudo dpkg -i sonic-swss-common/libswsscommon_1.0.0_amd64.deb
+      sudo dpkg -i sonic-swss-common/libswsscommon-dev_1.0.0_amd64.deb
+    workingDirectory: $(Pipeline.Workspace)
+    displayName: "Install sonic swss Common"
+  - checkout: self
+  - script: |
+      ls -l
+      dpkg-buildpackage -us -uc -b && cp ../*.deb .
+    displayName: "Compile sonic wpa supplicant"
+  - publish: $(System.DefaultWorkingDirectory)/
+    artifact: sonic-wpa-supplicant
+    displayName: "Archive sonic wpa supplicant debian packages"
+
+- job:
+  timeoutInMinutes: 240
+  displayName: "arm64"
+  pool: sonicbld
+
+  container:
+    image: sonicdev-microsoft.azurecr.io:443/sonic-slave-buster-arm64:latest
+
+  steps:
+  - script: |
+      sudo apt-get install -qq -y \
+        qtbase5-dev \
+        libdbus-glib-1-2 \
+        libdbus-glib-1-dev \
+        libpcsclite-dev \
+        docbook-to-man \
+        docbook-utils \
+        aspell-en \
+        libhiredis-dev \
+        libnl-3-dev \
+        libnl-genl-3-dev \
+        libnl-route-3-dev \
+        libnl-nf-3-dev \
+        swig3.0 \
+        libpython2.7-dev
+    displayName: "Install dependencies"
+  - task: DownloadPipelineArtifact@2
+    inputs:
+      source: specific
+      project: build
+      pipeline: 9
+      artifacts: sonic-swss-common.arm64
+      runVersion: 'latestFromBranch'
+      runBranch: 'refs/heads/master'
+    displayName: "Download sonic swss common deb packages"
+  - script: |
+      sudo dpkg -i sonic-swss-common.arm64/libswsscommon_1.0.0_arm64.deb
+      sudo dpkg -i sonic-swss-common.arm64/libswsscommon-dev_1.0.0_arm64.deb
+    workingDirectory: $(Pipeline.Workspace)
+    displayName: "Install sonic swss Common"
+  - checkout: self
+  - script: |
+      ls -l
+      dpkg-buildpackage -us -uc -b && cp ../*.deb .
+    displayName: "Compile sonic wpa supplicant"
+  - publish: $(System.DefaultWorkingDirectory)/
+    artifact: sonic-wpa-supplicant.arm64
+    displayName: "Archive sonic wpa supplicant debian packages"
+
+
+- job:
+  timeoutInMinutes: 240
+  displayName: "armhf"
+  pool: sonicbld
+
+  container:
+    image: sonicdev-microsoft.azurecr.io:443/sonic-slave-buster-armhf:latest
+
+  steps:
+  - script: |
+      sudo apt-get install -qq -y \
+        qtbase5-dev \
+        libdbus-glib-1-2 \
+        libdbus-glib-1-dev \
+        libpcsclite-dev \
+        docbook-to-man \
+        docbook-utils \
+        aspell-en \
+        libhiredis-dev \
+        libnl-3-dev \
+        libnl-genl-3-dev \
+        libnl-route-3-dev \
+        libnl-nf-3-dev \
+        swig3.0 \
+        libpython2.7-dev
+    displayName: "Install dependencies"
+  - task: DownloadPipelineArtifact@2
+    inputs:
+      source: specific
+      project: build
+      pipeline: 9
+      artifacts: sonic-swss-common.armhf
+      runVersion: 'latestFromBranch'
+      runBranch: 'refs/heads/master'
+    displayName: "Download sonic swss common deb packages"
+  - script: |
+      sudo dpkg -i sonic-swss-common.armhf/libswsscommon_1.0.0_armhf.deb
+      sudo dpkg -i sonic-swss-common.armhf/libswsscommon-dev_1.0.0_armhf.deb
+    workingDirectory: $(Pipeline.Workspace)
+    displayName: "Install sonic swss Common"
+  - checkout: self
+  - script: |
+      ls -l
+      dpkg-buildpackage -us -uc -b && cp ../*.deb .
+    displayName: "Compile sonic wpa supplicant"
+  - publish: $(System.DefaultWorkingDirectory)/
+    artifact: sonic-wpa-supplicant.armhf
+    displayName: "Archive sonic wpa supplicant debian packages"
