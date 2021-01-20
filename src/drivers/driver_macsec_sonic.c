@@ -453,7 +453,7 @@ static int macsec_sonic_set_transmit_next_pn(void *priv, struct transmit_sa *sa)
     char * buffer = create_buffer("%" PRIu64 "", sa->next_pn);
     const struct sonic_db_name_value_pair pairs[] = 
     {
-        {"init_pn", buffer}
+        {"next_pn", buffer}
     };
     int ret = sonic_db_set(
         drv->sonic_manager,
