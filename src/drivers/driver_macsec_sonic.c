@@ -70,7 +70,7 @@ static char * create_buffer(const char * fmt, ...)
 #define CREATE_SA_KEY(IFNAME, SA, SEPARATOR)    \
     create_buffer(                              \
         "%s"                                    \
-        SEPARATOR "%" PRIu64 "",                \
+        SEPARATOR "%" PRIu64 ""                 \
         SEPARATOR "%u",                         \
         IFNAME,                                 \
         mka_sci_u64(&SA->sc->sci),              \
