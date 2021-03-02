@@ -393,9 +393,9 @@ SM_STEP(CP)
 	case CP_RECEIVING:
 		if (sm->new_sak || changed_connect(sm))
 			SM_ENTER(CP, ABANDON);
-		if (!sm->elected_self)
+		else if (!sm->elected_self)
 			SM_ENTER(CP, READY);
-		if (sm->elected_self &&
+		else if (sm->elected_self &&
 		    (sm->all_receiving || !sm->controlled_port_enabled ||
 		     !sm->transmit_when))
 			SM_ENTER(CP, TRANSMIT);
@@ -421,7 +421,7 @@ SM_STEP(CP)
 	case CP_READY:
 		if (sm->new_sak || changed_connect(sm))
 			SM_ENTER(CP, ABANDON);
-		if (sm->server_transmitting || !sm->controlled_port_enabled)
+		else if (sm->server_transmitting || !sm->controlled_port_enabled)
 			SM_ENTER(CP, TRANSMIT);
 		break;
 	case CP_ABANDON:
