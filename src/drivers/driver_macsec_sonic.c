@@ -156,6 +156,7 @@ static int macsec_sonic_macsec_init(void *priv, struct macsec_init_params *param
     {
         {"enable", "false"},
         {"cipher_suite" , "GCM-AES-128"}, // Default cipher suite
+        {"send_sci", params->always_include_sci ? "true" : "false"},
     };
     int ret = sonic_db_set(
         drv->sonic_manager,
