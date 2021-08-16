@@ -20,6 +20,7 @@
 #include "fst/fst.h"
 #include "config.h"
 
+#include <limits.h>
 
 #if !defined(CONFIG_CTRL_IFACE) && defined(CONFIG_NO_CONFIG_WRITE)
 #define NO_CONFIG_WRITE
@@ -2554,6 +2555,7 @@ static const struct parse_data ssid_fields[] = {
 	{ INT_RANGE(macsec_policy, 0, 1) },
 	{ INT_RANGE(macsec_integ_only, 0, 1) },
 	{ INT_RANGE(macsec_ciphersuite, 0, 3) },
+	{ INT_RANGE(macsec_rekey_period, 0, INT_MAX) },
 	{ INT_RANGE(macsec_conf_offset, 0, 3) },
 	{ INT_RANGE(macsec_include_sci, 0, 1) },
 	{ INT_RANGE(macsec_replay_protect, 0, 1) },

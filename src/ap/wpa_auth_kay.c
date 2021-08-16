@@ -328,6 +328,7 @@ int ieee802_1x_alloc_kay_sm_hapd(struct hostapd_data *hapd,
 	res = ieee802_1x_kay_init(kay_ctx, policy, 0, 0, 1,
 				  hapd->conf->macsec_replay_protect,
 				  hapd->conf->macsec_replay_window,
+				  0,
 				  hapd->conf->macsec_port,
 				  hapd->conf->mka_priority, hapd->conf->iface,
 				  hapd->own_addr);

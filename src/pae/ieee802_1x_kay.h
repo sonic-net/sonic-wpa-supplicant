@@ -222,6 +222,8 @@ struct ieee802_1x_kay {
 	u8 dist_an;
 	time_t dist_time;
 
+	int macsec_rekey_period;
+
 	u8 mka_version;
 	u8 algo_agility[4];
 
@@ -249,6 +251,7 @@ ieee802_1x_kay_init(struct ieee802_1x_kay_ctx *ctx, enum macsec_policy policy,
 		    int macsec_ciphersuite, enum confidentiality_offset macsec_offset,
 		    bool macsec_include_sci,
 		    bool macsec_replay_protect, u32 macsec_replay_window,
+		    int macsec_rekey_period,
 		    u16 port, u8 priority, const char *ifname, const u8 *addr);
 void ieee802_1x_kay_deinit(struct ieee802_1x_kay *kay);
 

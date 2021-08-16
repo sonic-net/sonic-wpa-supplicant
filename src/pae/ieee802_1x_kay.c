@@ -1398,6 +1398,13 @@ ieee802_1x_mka_encode_sak_use_body(
 				participant->new_sak = true;
 			}
 		}
+		if (kay->macsec_rekey_period != 0 && kay->dist_time != 0) {
+			if ((kay->dist_time + kay->macsec_rekey_period) < time(NULL)) {
+				participant->new_sak = true;
+				wpa_printf(MSG_WARNING,
+					"KaY: Rekey period");
+			}
+		}
 	}
 
 	/* plain tx, plain rx */
@@ -3558,6 +3565,7 @@ ieee802_1x_kay_init(struct ieee802_1x_kay_ctx *ctx, enum macsec_policy policy,
 		    int macsec_ciphersuite, enum confidentiality_offset macsec_offset,
 		    bool macsec_include_sci,
 		    bool macsec_replay_protect, u32 macsec_replay_window,
+		    int macsec_rekey_period,
 		    u16 port, u8 priority, const char *ifname, const u8 *addr)
 {
 	struct ieee802_1x_kay *kay;
@@ -3599,6 +3607,8 @@ ieee802_1x_kay_init(struct ieee802_1x_kay_ctx *ctx, enum macsec_policy policy,
 	kay->pn_exhaustion = cipher_suite_tbl[kay->macsec_csindex].pn_exhaustion;
 	kay->mka_algindex = DEFAULT_MKA_ALG_INDEX;
 	kay->mka_version = MKA_VERSION_ID;
+
+	kay->macsec_rekey_period = macsec_rekey_period;
 
 	os_memcpy(kay->algo_agility, mka_algo_agility,
 		  sizeof(kay->algo_agility));
