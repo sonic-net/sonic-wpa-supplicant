@@ -1478,7 +1478,7 @@ static const char *network_fields[] = {
 	"macsec_policy",
 	"macsec_integ_only",
 	"macsec_ciphersuite",
-	"macsec_rekey_period",
+	"mka_rekey_period",
 	"macsec_conf_offset",
 	"macsec_include_sci",
 	"macsec_replay_protect",

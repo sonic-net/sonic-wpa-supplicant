@@ -905,11 +905,11 @@ struct wpa_ssid {
 	int macsec_replay_protect;
 
 	/**
-	 * macsec_rekey_period - The period of proactively refresh(Unit second).
+	 * mka_rekey_period - The period of proactively refresh(Unit second).
 	 *
 	 * Default 0 which means never proactive refresh SAK
 	 */
-	int macsec_rekey_period;
+	int mka_rekey_period;
 
 	/**
 	 * macsec_replay_window - MACsec replay protection window

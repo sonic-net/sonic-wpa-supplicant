@@ -903,7 +903,7 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 	write_mka_ckn(f, ssid);
 	INT(macsec_integ_only);
 	INT(macsec_ciphersuite);
-	INT_DEF(macsec_rekey_period, 0);
+	INT_DEF(mka_rekey_period, 0);
 	INT(macsec_conf_offset);
 	INT(macsec_include_sci);
 	INT(macsec_replay_protect);
