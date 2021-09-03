@@ -905,6 +905,13 @@ struct wpa_ssid {
 	int macsec_replay_protect;
 
 	/**
+	 * mka_rekey_period - The period of proactively refresh(Unit second).
+	 *
+	 * Default 0 which means never proactive refresh SAK
+	 */
+	int mka_rekey_period;
+
+	/**
 	 * macsec_replay_window - MACsec replay protection window
 	 *
 	 * A window in which replay is tolerated, to allow receipt of frames
