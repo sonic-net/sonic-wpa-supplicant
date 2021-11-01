@@ -18,7 +18,7 @@
 #include <chrono>
 
 // select() function timeout retry time, in millisecond
-constexpr int SELECT_TIMEOUT = 2000;
+constexpr int SELECT_TIMEOUT = 10000;
 
 // Retry times to counter db
 constexpr unsigned int RETRY_TIMES = 20;
