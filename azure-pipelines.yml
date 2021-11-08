@@ -61,7 +61,7 @@ jobs:
 - job:
   timeoutInMinutes: 240
   displayName: "arm64"
-  pool: sonicbld
+  pool: sonicbld-arm64
 
   container:
     image: sonicdev-microsoft.azurecr.io:443/sonic-slave-buster-arm64:latest
@@ -111,7 +111,7 @@ jobs:
 - job:
   timeoutInMinutes: 240
   displayName: "armhf"
-  pool: sonicbld
+  pool: sonicbld-armhf
 
   container:
     image: sonicdev-microsoft.azurecr.io:443/sonic-slave-buster-armhf:latest
