@@ -34,7 +34,7 @@
 
 struct cb_arg {
 	struct macsec_drv_data *drv;
-	u64 pn;
+	u64 *pn;
 	int ifindex;
 	u8 txsa;
 	u8 rxsa;
@@ -546,7 +546,7 @@ static int dump_callback(struct nl_msg *msg, void *argp)
 				continue;
 			if (!tb[MACSEC_SA_ATTR_PN])
 				return 0;
-			arg->pn = nla_get_u32(tb[MACSEC_SA_ATTR_PN]);
+			*arg->pn = nla_get_u32(tb[MACSEC_SA_ATTR_PN]);
 			return 0;
 		}
 
@@ -590,7 +590,7 @@ static int dump_callback(struct nl_msg *msg, void *argp)
 					continue;
 				if (!tb_sa[MACSEC_SA_ATTR_PN])
 					return 0;
-				arg->pn =
+				*arg->pn =
 					nla_get_u32(tb_sa[MACSEC_SA_ATTR_PN]);
 
 				return 0;
@@ -628,7 +628,7 @@ static int nl_send_recv(struct nl_sock *sk, struct nl_msg *msg)
 
 
 static int do_dump(struct macsec_drv_data *drv, u8 txsa, u64 rxsci, u8 rxsa,
-		   u64 pn)
+		   u64 *pn)
 {
 	struct macsec_genl_ctx *ctx = &drv->ctx;
 	struct nl_msg *msg;
@@ -680,7 +680,7 @@ static int macsec_drv_get_receive_lowest_pn(void *priv, struct receive_sa *sa)
 	wpa_printf(MSG_DEBUG, DRV_PREFIX "%s", __func__);
 
 	err = do_dump(drv, 0xff, mka_sci_u64(&sa->sc->sci), sa->an,
-		      sa->lowest_pn);
+		      &sa->lowest_pn);
 	wpa_printf(MSG_DEBUG, DRV_PREFIX "%s: result %" PRIu64 "", __func__,
 		   sa->lowest_pn);
 
@@ -748,7 +748,7 @@ static int macsec_drv_get_transmit_next_pn(void *priv, struct transmit_sa *sa)
 
 	wpa_printf(MSG_DEBUG, "%s", __func__);
 
-	err = do_dump(drv, sa->an, UNUSED_SCI, 0xff, sa->next_pn);
+	err = do_dump(drv, sa->an, UNUSED_SCI, 0xff, &sa->next_pn);
 	wpa_printf(MSG_DEBUG, DRV_PREFIX "%s: err %d result %" PRIu64 "", __func__, err,
 		   sa->next_pn);
 	return err;
