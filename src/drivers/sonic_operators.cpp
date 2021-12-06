@@ -6,6 +6,18 @@
 #include <swss/select.h>
 #include <swss/subscriberstatetable.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include "utils/common.h"
+
+#ifdef __cplusplus
+}
+#endif
+
+#include <errno.h>
+#include <string.h>
 #include <vector>
 #include <map>
 #include <algorithm>
@@ -16,6 +28,9 @@
 #include <sstream>
 #include <thread>
 #include <chrono>
+
+#define LOG_FORMAT(FORMAT, ...) \
+    "(sonic_operators) : %s " FORMAT"\n",__PRETTY_FUNCTION__,__VA_ARGS__
 
 // select() function timeout retry time, in millisecond
 constexpr int SELECT_TIMEOUT = 10000;
@@ -179,6 +194,7 @@ public:
         }
         else
         {
+            wpa_printf(MSG_ERROR, LOG_FORMAT("Db id %d is invalid", db_id));
             return SONIC_DB_FAIL;
         }
     }
@@ -195,12 +211,14 @@ public:
             auto & table = get_table(m_tables_in_state_db, m_state_db, table_name);
             if(!table.get(key, pairs))
             {
+                wpa_printf(MSG_DEBUG, LOG_FORMAT("Cannot get %s in table %s", key.c_str(), table_name.c_str()));
                 return SONIC_DB_FAIL;
             }
             return SONIC_DB_SUCCESS;
         }
         else
         {
+            wpa_printf(MSG_ERROR, LOG_FORMAT("Db id %d is invalid", db_id));
             return SONIC_DB_FAIL;
         }
     }
@@ -223,6 +241,7 @@ public:
             );
         if (pairs->pairs == nullptr)
         {
+            wpa_printf(MSG_ERROR, LOG_FORMAT("Cannot allocate query result for key %s", key.c_str()));
             return SONIC_DB_FAIL;
         }
         for (size_t i = 0; i < result.size(); i++)
@@ -250,6 +269,7 @@ public:
         }
         else
         {
+            wpa_printf(MSG_ERROR, LOG_FORMAT("Db id %d is invalid", db_id));
             return SONIC_DB_FAIL;
         }
     }
@@ -272,10 +292,12 @@ public:
         }
         else
         {
+            wpa_printf(MSG_ERROR, LOG_FORMAT("Db id %d is invalid", db_id));
             return SONIC_DB_FAIL;
         }
         if (consumer == nullptr)
         {
+            wpa_printf(MSG_WARNING, LOG_FORMAT("Cannot find the table %s", table_name.c_str()));
             return SONIC_DB_FAIL;
         }
 
@@ -298,10 +320,12 @@ public:
             ret = m_selector.select(&sel, SELECT_TIMEOUT);
             if (ret == swss::Select::ERROR)
             {
+                wpa_printf(MSG_WARNING, LOG_FORMAT("Select failed %s", strerror(errno)));
                 return SONIC_DB_FAIL;
             }
             if (ret == swss::Select::TIMEOUT)
             {
+                wpa_printf(MSG_WARNING, LOG_FORMAT("Select timeout on the table %s",  table_name.c_str()));
                 return SONIC_DB_FAIL;
             }
             std::deque<swss::KeyOpFieldsValuesTuple> entries;
@@ -327,6 +351,7 @@ public:
         const std::string id = get_counter_id(key);
         if (id.empty())
         {
+            wpa_printf(MSG_WARNING, LOG_FORMAT("Cannot find the key %s from the table %s",  key.c_str(), table_name.c_str()));
             return SONIC_DB_FAIL;
         }
         // Find counter from counter db
@@ -354,6 +379,7 @@ public:
             std::stringstream(fvValue(*value)) >> *counter;
             return SONIC_DB_SUCCESS;
         }
+        wpa_printf(MSG_WARNING, LOG_FORMAT("Cannot get the key %s field %s from the table %s",  key.c_str(), field.c_str(), table_name.c_str()));
         return SONIC_DB_FAIL;
     }
 
@@ -364,6 +390,7 @@ public:
         const std::string id = get_counter_id(key);
         if (id.empty())
         {
+            wpa_printf(MSG_WARNING, LOG_FORMAT("Cannot find the key %s from the table %s",  key.c_str(), table_name.c_str()));
             return SONIC_DB_FAIL;
         }
         if (m_tables_in_counter_db.erase(id) == 0)
