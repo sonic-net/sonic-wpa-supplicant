@@ -537,3 +537,32 @@ int secy_deinit_macsec(struct ieee802_1x_kay *kay)
 
 	return ops->macsec_deinit(ops->ctx);
 }
+
+int secy_get_max_sa_per_sc(struct ieee802_1x_kay *kay, enum max_sa_per_sc *max)
+{
+	struct ieee802_1x_kay_ctx *ops;
+
+	if (!kay) {
+		wpa_printf(MSG_ERROR, "KaY: %s params invalid", __func__);
+		return -1;
+	}
+
+	ops = kay->ctx;
+	if (!ops) {
+		wpa_printf(MSG_ERROR,
+			   "KaY: secy get_max_sas_per_sc operation not supported");
+		return -1;
+	}
+
+	/*
+	* If the max SAs per SC setting control is not implemented by
+	* the driver, then return the default
+	*/
+	if( !ops->macsec_get_max_sa_per_sc) {
+		*max = MAX_SA_PER_SC_DEFAULT;
+		return 0;
+	}
+
+	return ops->macsec_get_max_sa_per_sc(ops->ctx, max);
+}
+

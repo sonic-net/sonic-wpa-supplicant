@@ -250,8 +250,9 @@ public:
             memcpy(name, result[i].first.data(), result[i].first.length() + 1);
             pairs->pairs[pairs->pair_count].name = name;
             char * value = reinterpret_cast<char *>(malloc(result[i].second.length() + 1));
-            memcpy(value, result[i].first.data(), result[i].second.length() + 1);
+            memcpy(value, result[i].second.data(), result[i].second.length() + 1);
             pairs->pairs[pairs->pair_count].value = value;
+            pairs->pair_count++;
         }
         return SONIC_DB_SUCCESS;
     }
