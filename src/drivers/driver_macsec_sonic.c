@@ -65,7 +65,7 @@ static char * create_buffer(const char * fmt, ...)
         "%s"                                    \
         SEPARATOR "%" PRIu64 "",                \
         IFNAME,                                 \
-        mka_sci_u64(&SC->sci))
+        __builtin_bswap64 (mka_sci_u64(&SC->sci)))
 
 #define CREATE_SA_KEY(IFNAME, SA, SEPARATOR)    \
     create_buffer(                              \
@@ -73,7 +73,7 @@ static char * create_buffer(const char * fmt, ...)
         SEPARATOR "%" PRIu64 ""                 \
         SEPARATOR "%u",                         \
         IFNAME,                                 \
-        mka_sci_u64(&SA->sc->sci),              \
+        __builtin_bswap64 (mka_sci_u64(&SA->sc->sci)),              \
         (unsigned int)(SA->an))
 
 static char * create_binary_hex(const void * binary, unsigned long long length)
