@@ -111,6 +111,7 @@ static char *create_auth_key(const unsigned char *key, unsigned long long key_le
 struct macsec_sonic_data
 {
     struct driver_wired_common_data common;
+    bool enabled;
 
     const char * ifname;
     sonic_db_handle sonic_manager;
@@ -130,6 +131,7 @@ static void *macsec_sonic_wpa_init(void *ctx, const char *ifname)
         return NULL;
     }
 
+    drv->enabled = false;
     drv->ifname = ifname;
     drv->sonic_manager = sonic_db_get_manager();
 
@@ -186,6 +188,13 @@ static int macsec_sonic_macsec_deinit(void *priv)
     struct macsec_sonic_data *drv = priv;
     ENTER_LOG;
 
+    // If the port hasn't been enabled, 
+    // we don't need to deinit it to avoid deinit calling in the initialization stage.
+    if (!drv->enabled)
+    {
+        return 0;
+    }
+
     int ret = sonic_db_del(
         drv->sonic_manager,
         APPL_DB,
@@ -226,6 +235,8 @@ static int macsec_sonic_enable_protect_frames(void *priv, bool enabled)
 {
     struct macsec_sonic_data *drv = priv;
     PRINT_LOG("%s", enabled ? "true" : "false");
+
+    drv->enabled = enabled;
 
     const struct sonic_db_name_value_pair pairs[] = 
     {
