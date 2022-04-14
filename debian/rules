@@ -7,7 +7,7 @@ include /usr/share/dpkg/default.mk
 
 # The build system doesn't use CPPFLAGS, pass them to CFLAGS/CXXFLAGS to
 # enable the missing (hardening) flags
-DEB_CFLAGS_MAINT_APPEND   = -MMD -Wall $(shell dpkg-buildflags --get CPPFLAGS)
+DEB_CFLAGS_MAINT_APPEND   = -MMD -Wall $(shell dpkg-buildflags --get CPPFLAGS) -Wno-error=array-bounds $(warning WARNING: Building with -Wno-error=array-bounds)
 DEB_CXXFLAGS_MAINT_APPEND = $(shell dpkg-buildflags --get CPPFLAGS)
 DEB_LDFLAGS_MAINT_APPEND  = -Wl,--as-needed
 export DEB_CFLAGS_MAINT_APPEND DEB_CXXFLAGS_MAINT_APPEND DEB_LDFLAGS_MAINT_APPEND
