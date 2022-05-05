@@ -4022,7 +4022,7 @@ struct wpa_driver_ops {
 	int (*macsec_get_capability)(void *priv, enum macsec_cap *cap);
 
 	 /**
-	 * macsec_get_max_sa_per_sec - Inform MKA of max number of SAs per SC
+	 * macsec_get_max_sa_per_sc - Inform MKA of max number of SAs per SC
 	 * @priv: Private driver interface data
 	 * @max: Max number of SAs per SC
 	 * Returns: 0 on success, -1 on failure
