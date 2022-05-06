@@ -37,6 +37,10 @@ static int wpas_macsec_deinit(void *priv)
 	return wpa_drv_macsec_deinit(priv);
 }
 
+static int wpas_macsec_get_max_sa_per_sc(void *priv, enum max_sa_per_sc *max)
+{
+	return wpa_drv_macsec_get_max_sa_per_sc(priv, max);
+}
 
 static int wpas_macsec_get_capability(void *priv, enum macsec_cap *cap)
 {
@@ -216,6 +220,7 @@ int ieee802_1x_alloc_kay_sm(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid)
 
 	kay_ctx->macsec_init = wpas_macsec_init;
 	kay_ctx->macsec_deinit = wpas_macsec_deinit;
+	kay_ctx->macsec_get_max_sa_per_sc = wpas_macsec_get_max_sa_per_sc;
 	kay_ctx->macsec_get_capability = wpas_macsec_get_capability;
 	kay_ctx->enable_protect_frames = wpas_enable_protect_frames;
 	kay_ctx->enable_encrypt = wpas_enable_encrypt;

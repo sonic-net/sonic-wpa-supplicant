@@ -16,6 +16,7 @@ struct ieee802_1x_kay_conf;
 
 int secy_init_macsec(struct ieee802_1x_kay *kay);
 int secy_deinit_macsec(struct ieee802_1x_kay *kay);
+int secy_get_max_sa_per_sc(struct ieee802_1x_kay *kay, enum max_sa_per_sc *max);
 
 /****** CP -> SecY ******/
 int secy_cp_control_validate_frames(struct ieee802_1x_kay *kay,

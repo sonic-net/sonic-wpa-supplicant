@@ -72,6 +72,20 @@ enum validate_frames {
 	Strict,
 };
 
+/*
+ * IEEE Association Number (which identifies the SA within an SC
+ * in a Macsec frame) is 2b wide. Hence we can have up to 4
+ * SAs active at any given time per SC. This setting
+ * allows an implementation to specify a lower value
+ */
+enum max_sa_per_sc {
+	MAX_SA_PER_SC_1 = 1,
+	MAX_SA_PER_SC_2 = 2,
+	MAX_SA_PER_SC_3 = 3,
+	MAX_SA_PER_SC_4 = 4,
+	MAX_SA_PER_SC_DEFAULT = MAX_SA_PER_SC_4,
+};
+
 /* IEEE Std 802.1X-2010 - Table 11-6 - Confidentiality Offset */
 enum confidentiality_offset {
 	CONFIDENTIALITY_NONE      = 0,
@@ -81,6 +95,8 @@ enum confidentiality_offset {
 };
 
 /* IEEE Std 802.1X-2010 - Table 9-2 */
+
+#define DEFAULT_PRIO_HIGHEST           0x0
 #define DEFAULT_PRIO_INFRA_PORT        0x10
 #define DEFAULT_PRIO_PRIMRAY_AP        0x30
 #define DEFAULT_PRIO_SECONDARY_AP      0x50

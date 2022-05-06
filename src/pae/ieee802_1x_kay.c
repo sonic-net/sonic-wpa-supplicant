@@ -2323,7 +2323,7 @@ ieee802_1x_kay_generate_new_sak(struct ieee802_1x_mka_participant *participant)
 
 	kay->dist_kn++;
 	kay->dist_an++;
-	if (kay->dist_an > 3)
+	if (kay->dist_an > kay->max_sa_per_sc - 1)
 		kay->dist_an = 0;
 
 	kay->dist_time = time(NULL);
@@ -3595,7 +3595,6 @@ ieee802_1x_kay_init(struct ieee802_1x_kay_ctx *ctx, enum macsec_policy policy,
 	kay->actor_sci.port = host_to_be16(port ? port : 0x0001);
 	wpa_printf(MSG_DEBUG, "KaY: Generated SCI: %s",
 		   sci_txt(&kay->actor_sci));
-	kay->actor_priority = priority;
 
 	/* While actor acts as a key server, shall distribute sakey */
 	kay->dist_kn = 1;
@@ -3658,6 +3657,22 @@ ieee802_1x_kay_init(struct ieee802_1x_kay_ctx *ctx, enum macsec_policy policy,
 	}
 
 	wpa_printf(MSG_DEBUG, "KaY: secy init macsec done");
+
+	enum max_sa_per_sc max;
+	if (secy_get_max_sa_per_sc( kay, &max ) < 0){
+		wpa_printf(MSG_ERROR, "KaY: Could not determine max SAs per SC");
+		goto error;
+	}
+	kay->max_sa_per_sc = max;
+
+	/* 
+	 * If the maximum SAs per SC is not the default, the actor_priority
+	 * is forced to the highest value of 0 so it can be elected as key
+	 * server and control the AN assignments to within the supported limit
+	 */
+	if (max != MAX_SA_PER_SC_4)
+		priority = DEFAULT_PRIO_HIGHEST;
+	kay->actor_priority = priority;
 
 	/* init CP */
 	kay->cp = ieee802_1x_cp_sm_init(kay);

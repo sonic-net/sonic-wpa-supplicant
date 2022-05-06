@@ -204,6 +204,53 @@ static int macsec_sonic_macsec_deinit(void *priv)
     return ret;
 }
 
+static int macsec_sonic_macsec_get_max_sa_per_sc(void *priv,
+                                                 enum max_sa_per_sc *max)
+{
+   struct macsec_sonic_data *drv = priv;
+   ENTER_LOG;
+
+   const struct sonic_db_name_value_pair pairs[] =
+   {
+      {"state", "ok"},
+   };
+
+   int ret = sonic_db_wait(
+       drv->sonic_manager,
+       STATE_DB,
+       STATE_MACSEC_PORT_TABLE_NAME,
+       SET_COMMAND,
+       drv->ifname,
+       PAIR_ARRAY(pairs));
+   if (ret == SONIC_DB_SUCCESS)
+   {
+      struct sonic_db_name_value_pairs * get_pairs = sonic_db_malloc_name_value_pairs();
+      ret = sonic_db_get(
+          drv->sonic_manager,
+          STATE_DB,
+          STATE_MACSEC_PORT_TABLE_NAME,
+          drv->ifname,
+          get_pairs);
+      if (ret == SONIC_DB_SUCCESS) {
+         int max_val = -1;
+         for ( unsigned int i = 0; i < get_pairs->pair_count; ++i ) {
+            if ( strcmp( get_pairs->pairs[i].name, "max_sa_per_sc" ) == 0 ) {
+               PRINT_LOG( "max_sa_per_sc found: %s", get_pairs->pairs[i].value );
+               sscanf( get_pairs->pairs[i].value, "%4d", &max_val );
+               break;
+            }
+         }
+         if ( max_val == -1 ) {
+            // If we don't find a max_sa_per_sc attribute use default value
+            max_val = MAX_SA_PER_SC_DEFAULT;
+         }
+         *max = max_val;
+      }
+      sonic_db_free_name_value_pairs( get_pairs );
+   }
+   return ret;
+}
+
 static int macsec_sonic_get_capability(void *priv, enum macsec_cap *cap)
 {
     struct macsec_sonic_data *drv = priv;
@@ -982,6 +1029,7 @@ const struct wpa_driver_ops wpa_driver_macsec_sonic_ops = {
 
     .macsec_init = macsec_sonic_macsec_init,
     .macsec_deinit = macsec_sonic_macsec_deinit,
+    .macsec_get_max_sa_per_sc = macsec_sonic_macsec_get_max_sa_per_sc,
     .macsec_get_capability = macsec_sonic_get_capability,
     .enable_protect_frames = macsec_sonic_enable_protect_frames,
     .enable_encrypt = macsec_sonic_enable_encrypt,
