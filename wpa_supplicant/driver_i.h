@@ -772,8 +772,14 @@ static inline int wpa_drv_macsec_deinit(struct wpa_supplicant *wpa_s)
 static inline int wpa_drv_macsec_get_max_sa_per_sc(struct wpa_supplicant *wpa_s,
                                             enum max_sa_per_sc *max)
 {
-	if (!wpa_s->driver->macsec_get_max_sa_per_sc)
-		return -1;
+	/*
+	* If the max SAs per SC setting control is not implemented by
+	* the driver, then return the default
+	*/
+	if(!wpa_s->driver->macsec_get_max_sa_per_sc) {
+		*max = MAX_SA_PER_SC_DEFAULT;
+		return 0;
+	}
 	return wpa_s->driver->macsec_get_max_sa_per_sc(wpa_s->drv_priv, max);
 }
 
