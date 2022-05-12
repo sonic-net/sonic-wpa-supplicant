@@ -63,17 +63,17 @@ static char * create_buffer(const char * fmt, ...)
 #define CREATE_SC_KEY(IFNAME, SC, SEPARATOR)    \
     create_buffer(                              \
         "%s"                                    \
-        SEPARATOR "%" PRIu64 "",                \
+        SEPARATOR "%" PRIx64 "",                \
         IFNAME,                                 \
-        mka_sci_u64(&SC->sci))
+        be_to_host64(mka_sci_u64(&SC->sci)))
 
-#define CREATE_SA_KEY(IFNAME, SA, SEPARATOR)    \
-    create_buffer(                              \
-        "%s"                                    \
-        SEPARATOR "%" PRIu64 ""                 \
-        SEPARATOR "%u",                         \
-        IFNAME,                                 \
-        mka_sci_u64(&SA->sc->sci),              \
+#define CREATE_SA_KEY(IFNAME, SA, SEPARATOR)        \
+    create_buffer(                                  \
+        "%s"                                        \
+        SEPARATOR "%" PRIx64 ""                     \
+        SEPARATOR "%u",                             \
+        IFNAME,                                     \
+        be_to_host64(mka_sci_u64(&SA->sc->sci)),    \
         (unsigned int)(SA->an))
 
 static char * create_binary_hex(const void * binary, unsigned long long length)
