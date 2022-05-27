@@ -333,6 +333,10 @@ public:
             consumer->pops(entries);
             for (auto & entry : entries)
             {
+                if (key != kfvKey(entry))
+                {
+                    continue;
+                }
                 if (meet_expectation(op, pairs, pair_count, entry))
                 {
                     return SONIC_DB_SUCCESS;
