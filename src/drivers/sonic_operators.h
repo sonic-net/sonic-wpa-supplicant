@@ -75,11 +75,6 @@ int sonic_db_get_counter(
     const char * field,
     uint64_t * counter);
 
-int sonic_db_del_counter(
-    sonic_db_handle sonic_manager,
-    const char * table_name,
-    const char * key);
-
 struct sonic_db_name_value_pairs * sonic_db_malloc_name_value_pairs();
 
 void sonic_db_free_name_value_pairs(struct sonic_db_name_value_pairs * pairs);
