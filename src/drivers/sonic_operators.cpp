@@ -1,6 +1,7 @@
 #include "sonic_operators.h"
 
 #include <swss/table.h>
+#include <swss/countertable.h>
 #include <swss/producerstatetable.h>
 #include <swss/dbconnector.h>
 #include <swss/select.h>
@@ -352,36 +353,17 @@ public:
         const std::string & field,
         uint64_t * counter)
     {
-        std::vector<swss::FieldValueTuple> result;
-        const std::string id = get_counter_id(key);
-        if (id.empty())
-        {
-            wpa_printf(MSG_WARNING, LOG_FORMAT("Cannot find the key %s from the table %s",  key.c_str(), table_name.c_str()));
-            return SONIC_DB_FAIL;
-        }
-        // Find counter from counter db
-        auto & counter_table = get_table(m_tables_in_counter_db, m_counters_db, table_name);
+        swss::CounterTable counter_table(&m_counters_db, table_name);
         auto retry_time = RETRY_TIMES;
         while (retry_time -- > 0)
         {
-            if (!counter_table.get(id, result))
+            std::string value;
+            if (!counter_table.hget(swss::MacsecCounter(), key, field, value))
             {
                 std::this_thread::sleep_for(std::chrono::milliseconds(RETRY_INTERVAL));
                 continue;
             }
-            auto value = std::find_if(
-                result.begin(),
-                result.end(),
-                [&](const swss::FieldValueTuple & fvt)
-                {
-                    return field == fvField(fvt);
-                });
-            if (value == result.end())
-            {
-                std::this_thread::sleep_for(std::chrono::milliseconds(RETRY_INTERVAL));
-                continue;
-            }
-            std::stringstream(fvValue(*value)) >> *counter;
+            std::stringstream(value) >> *counter;
             return SONIC_DB_SUCCESS;
         }
         wpa_printf(MSG_WARNING, LOG_FORMAT("Cannot get the key %s field %s from the table %s",  key.c_str(), field.c_str(), table_name.c_str()));
