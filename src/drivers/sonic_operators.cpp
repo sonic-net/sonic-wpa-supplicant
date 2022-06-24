@@ -73,7 +73,6 @@ private:
     swss::DBConnector m_state_db;
     swss::DBConnector m_counters_db;
 
-    std::map<std::string, swss::Table> m_tables_in_counter_db;
     std::map<std::string, swss::ProducerStateTable> m_producer_state_tables_in_app_db;
     std::map<std::string, swss::SubscriberStateTable> m_subscriber_state_tables_in_state_db;
     std::map<std::string, swss::Table> m_tables_in_state_db;
@@ -87,27 +86,6 @@ private:
                 std::piecewise_construct,
                 std::forward_as_tuple(table_name),
                 std::forward_as_tuple(&db, table_name)).first->second;
-    }
-
-    std::string get_counter_id(const std::string & obj_key)
-    {
-        std::vector<swss::FieldValueTuple> temp;
-        auto & map_table = get_table(m_tables_in_counter_db, m_counters_db, COUNTERS_MACSEC_NAME_MAP);
-        if (!map_table.get("", temp))
-        {
-            return "";
-        }
-        auto id = std::find_if(
-            temp.begin(),
-            temp.end(),
-            [&](const swss::FieldValueTuple & fvt){
-                return fvField(fvt) == obj_key;
-            });
-        if (id == temp.end())
-        {
-            return "";
-        }
-        return id->second;
     }
 
     bool meet_expectation(
@@ -369,23 +347,6 @@ public:
         wpa_printf(MSG_WARNING, LOG_FORMAT("Cannot get the key %s field %s from the table %s",  key.c_str(), field.c_str(), table_name.c_str()));
         return SONIC_DB_FAIL;
     }
-
-    int del_counter(
-        const std::string & table_name,
-        const std::string & key)
-    {
-        const std::string id = get_counter_id(key);
-        if (id.empty())
-        {
-            wpa_printf(MSG_WARNING, LOG_FORMAT("Cannot find the key %s from the table %s",  key.c_str(), table_name.c_str()));
-            return SONIC_DB_FAIL;
-        }
-        if (m_tables_in_counter_db.erase(id) == 0)
-        {
-            return SONIC_DB_FAIL;
-        }
-        return SONIC_DB_SUCCESS;
-    }
 };
 
 sonic_db_handle sonic_db_get_manager()
@@ -470,20 +431,6 @@ int sonic_db_get_counter(
     }
     return manager->get_counter(table_name, key, field, counter);
 }
-
-int sonic_db_del_counter(
-    sonic_db_handle sonic_manager,
-    const char * table_name,
-    const char * key)
-{
-    sonic_db_manager * manager = reinterpret_cast<sonic_db_manager *>(sonic_manager);
-    if (manager == nullptr)
-    {
-        return SONIC_DB_FAIL;
-    }
-    return manager->del_counter(table_name, key);
-}
-
 
 struct sonic_db_name_value_pairs * sonic_db_malloc_name_value_pairs()
 {
