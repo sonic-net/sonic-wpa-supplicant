@@ -33,7 +33,7 @@ extern "C" {
     "(sonic_operators) : %s " FORMAT"\n",__PRETTY_FUNCTION__,__VA_ARGS__
 
 // select() function timeout retry time, in millisecond
-constexpr int SELECT_TIMEOUT = 60000;
+constexpr int SELECT_TIMEOUT = 5 * 60 * 1000; // 5mins
 
 // Retry times to counter db
 constexpr unsigned int RETRY_TIMES = 20;
