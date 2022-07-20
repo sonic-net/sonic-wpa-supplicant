@@ -1304,12 +1304,12 @@ ieee802_1x_mka_get_sak_use_length(
 /**
  * ieee802_1x_mka_get_lpn
  */
-static u32
+static u64
 ieee802_1x_mka_get_lpn(struct ieee802_1x_mka_participant *principal,
 		       struct ieee802_1x_mka_ki *ki)
 {
 	struct transmit_sa *txsa;
-	u32 lpn = 0;
+	u64 lpn = 0;
 
 	dl_list_for_each(txsa, &principal->txsc->sa_list,
 			 struct transmit_sa, list) {
@@ -1355,7 +1355,7 @@ ieee802_1x_mka_encode_sak_use_body(
 	struct ieee802_1x_mka_sak_use_body *body;
 	struct ieee802_1x_kay *kay = participant->kay;
 	unsigned int length;
-	u32 olpn, llpn;
+	u64 olpn, llpn;
 
 	length = ieee802_1x_mka_get_sak_use_length(participant);
 	body = wpabuf_put(buf, length);
