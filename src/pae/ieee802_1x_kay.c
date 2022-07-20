@@ -3388,6 +3388,10 @@ static int ieee802_1x_kay_decode_mkpdu(struct ieee802_1x_kay *kay,
 		if (body_type == MKA_ICV_INDICATOR)
 			return 0;
 
+		// XPN hasn't be supported
+		if (body_type == MKA_XPN)
+			return 0;
+
 		if (left_len < (MKA_HDR_LEN + body_len + DEFAULT_ICV_LEN)) {
 			wpa_printf(MSG_ERROR,
 				   "KaY: MKA Peer Packet Body Length (%zu bytes) is less than the Parameter Set Header Length (%zu bytes) + the Parameter Set Body Length (%zu bytes) + %d bytes of ICV",

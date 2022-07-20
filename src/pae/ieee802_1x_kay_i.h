@@ -25,6 +25,7 @@ enum mka_packet_type {
 	MKA_DISTRIBUTED_CAK = 5,
 	MKA_KMD = 6,
 	MKA_ANNOUNCEMENT = 7,
+	MKA_XPN = 8, // Not support
 	MKA_ICV_INDICATOR = 255
 };
 
