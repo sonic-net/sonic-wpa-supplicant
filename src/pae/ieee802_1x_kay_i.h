@@ -13,7 +13,8 @@
 #include "common/defs.h"
 #include "common/ieee802_1x_defs.h"
 
-#define MKA_VERSION_ID              1
+#define MKA_VERSION_1               1 /* IEEE 802.1X-2010 */
+#define MKA_VERSION_ID              MKA_VERSION_1
 
 /* IEEE Std 802.1X-2010, 11.11.1, Table 11-7 (MKPDU parameter sets) */
 enum mka_packet_type {
