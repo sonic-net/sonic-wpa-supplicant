@@ -13,7 +13,8 @@
 #include "common/defs.h"
 #include "common/ieee802_1x_defs.h"
 
-#define MKA_VERSION_ID              1
+#define MKA_VERSION_1               1 /* IEEE 802.1X-2010 */
+#define MKA_VERSION_ID              MKA_VERSION_1
 
 /* IEEE Std 802.1X-2010, 11.11.1, Table 11-7 (MKPDU parameter sets) */
 enum mka_packet_type {
@@ -25,6 +26,7 @@ enum mka_packet_type {
 	MKA_DISTRIBUTED_CAK = 5,
 	MKA_KMD = 6,
 	MKA_ANNOUNCEMENT = 7,
+	MKA_XPN = 8, // Not support
 	MKA_ICV_INDICATOR = 255
 };
 

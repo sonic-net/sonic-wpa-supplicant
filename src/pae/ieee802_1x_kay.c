@@ -33,6 +33,7 @@
 
 #define PENDING_PN_EXHAUSTION  0x00000000C0000000ULL
 #define PENDING_XPN_EXHAUSTION 0xC000000000000000ULL
+#define MAX_TOLERANT_PACKET_LOSS 0x0000000040000000ULL
 
 #define MKA_ALIGN_LENGTH(len) (((len) + 0x3) & ~0x3)
 
@@ -1304,12 +1305,12 @@ ieee802_1x_mka_get_sak_use_length(
 /**
  * ieee802_1x_mka_get_lpn
  */
-static u32
+static u64
 ieee802_1x_mka_get_lpn(struct ieee802_1x_mka_participant *principal,
 		       struct ieee802_1x_mka_ki *ki)
 {
 	struct transmit_sa *txsa;
-	u32 lpn = 0;
+	u64 lpn = 0;
 
 	dl_list_for_each(txsa, &principal->txsc->sa_list,
 			 struct transmit_sa, list) {
@@ -1355,7 +1356,7 @@ ieee802_1x_mka_encode_sak_use_body(
 	struct ieee802_1x_mka_sak_use_body *body;
 	struct ieee802_1x_kay *kay = participant->kay;
 	unsigned int length;
-	u32 olpn, llpn;
+	u64 olpn, llpn;
 
 	length = ieee802_1x_mka_get_sak_use_length(participant);
 	body = wpabuf_put(buf, length);
@@ -1459,7 +1460,7 @@ ieee802_1x_mka_decode_sak_use_body(
 	struct data_key *sa_key = NULL;
 	size_t body_len;
 	struct ieee802_1x_mka_ki ki;
-	u32 lpn;
+	u64 lpn;
 	struct ieee802_1x_kay *kay = participant->kay;
 	u32 olpn, llpn;
 
@@ -1552,6 +1553,40 @@ ieee802_1x_mka_decode_sak_use_body(
 			   "KaY: Distributed keys don't match - ignore SAK use");
 		return 0;
 	}
+	if (kay->mka_version == MKA_VERSION_1 && kay->pn_exhaustion == PENDING_XPN_EXHAUSTION) {
+		/* If MKA Verseion is 1 and the cipher is XPN, the highest bits of PN need be recovered from dataplane*/
+		struct receive_sc *rxsc;
+		struct receive_sa *rxsa;
+		bool found = false;
+		u64 high_bits = 0, low_bits = 0;
+		dl_list_for_each(rxsc, &participant->rxsc_list,
+				 struct receive_sc, list) {
+			dl_list_for_each(rxsa, &rxsc->sa_list,
+					 struct receive_sa, list) {
+				if (sa_key && rxsa->pkey == sa_key) {
+					secy_get_receive_lowest_pn(participant->kay, rxsa);
+					high_bits = rxsa->lowest_pn & 0xFFFFFFFF00000000ULL;
+					low_bits = rxsa->lowest_pn & 0x00000000FFFFFFFFULL;
+					found = true;
+					break;
+				}
+			}
+			if (found)
+				break;
+		}
+		if (found) {
+			if (low_bits > lpn) {
+				u64 highest_accept_bits = (low_bits + MAX_TOLERANT_PACKET_LOSS) & 0x00000000FFFFFFFFULL;
+				if (low_bits < highest_accept_bits || highest_accept_bits < lpn) {
+					lpn = rxsa->lowest_pn;
+				} else {
+					lpn = (high_bits + (1ULL << 32)) | (lpn & 0x00000000FFFFFFFFULL);
+				}
+			} else {
+				lpn = high_bits | (lpn & 0x00000000FFFFFFFFULL);
+			}
+		}
+	}
 	sa_key->next_pn = lpn;
 
 	/* The key server must check that all peers are using the most recent
@@ -1624,7 +1659,7 @@ ieee802_1x_mka_decode_sak_use_body(
 				secy_set_receive_lowest_pn(participant->kay,
 							   rxsa);
 				wpa_printf(MSG_DEBUG,
-					   "KaY: update dist LPN=0x%x", lpn);
+					   "KaY: update dist LPN=%" PRIu64, lpn);
 			}
 		}
 
@@ -3387,6 +3422,11 @@ static int ieee802_1x_kay_decode_mkpdu(struct ieee802_1x_kay *kay,
 
 		if (body_type == MKA_ICV_INDICATOR)
 			return 0;
+
+		if (kay->mka_version == MKA_VERSION_1 && body_type == MKA_XPN) {
+			wpa_printf(MSG_DEBUG, "MKA_XPN (type 8) hasn't been supported in MKA VERSION 1");
+			continue;
+		}
 
 		if (left_len < (MKA_HDR_LEN + body_len + DEFAULT_ICV_LEN)) {
 			wpa_printf(MSG_ERROR,
