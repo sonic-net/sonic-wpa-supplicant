@@ -1576,7 +1576,8 @@ ieee802_1x_mka_decode_sak_use_body(
 		}
 		if (found) {
 			if (low_bits > lpn) {
-				if (((low_bits + MAX_TOLERANT_PACKET_LOSS) & 0x00000000FFFFFFFFULL) < lpn) {
+				u64 highest_accept_bits = (low_bits + MAX_TOLERANT_PACKET_LOSS) & 0x00000000FFFFFFFFULL;
+				if (low_bits < highest_accept_bits || highest_accept_bits < lpn) {
 					lpn = rxsa->lowest_pn;
 				} else {
 					lpn = (high_bits + (1ULL << 32)) | (lpn & 0x00000000FFFFFFFFULL);
