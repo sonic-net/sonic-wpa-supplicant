@@ -1557,6 +1557,7 @@ ieee802_1x_mka_decode_sak_use_body(
 		/* If MKA Verseion is 1 and the cipher is XPN, the highest bits of PN need be recovered from dataplane*/
 		struct receive_sc *rxsc;
 		struct receive_sa *rxsa;
+		bool found = false;
 		u64 high_bits = 0, low_bits = 0;
 		dl_list_for_each(rxsc, &participant->rxsc_list,
 				 struct receive_sc, list) {
@@ -1566,18 +1567,23 @@ ieee802_1x_mka_decode_sak_use_body(
 					secy_get_receive_lowest_pn(participant->kay, rxsa);
 					high_bits = rxsa->lowest_pn & 0xFFFFFFFF00000000ULL;
 					low_bits = rxsa->lowest_pn & 0x00000000FFFFFFFFULL;
+					found = true;
 					break;
 				}
 			}
+			if (found)
+				break;
 		}
-		if (low_bits > lpn) {
-			if (((low_bits + MAX_TOLERANT_PACKET_LOSS) & 0x00000000FFFFFFFFULL) < lpn) {
-				lpn = rxsa->lowest_pn;
+		if (found) {
+			if (low_bits > lpn) {
+				if (((low_bits + MAX_TOLERANT_PACKET_LOSS) & 0x00000000FFFFFFFFULL) < lpn) {
+					lpn = rxsa->lowest_pn;
+				} else {
+					lpn = (high_bits + (1ULL << 32)) | (lpn & 0x00000000FFFFFFFFULL);
+				}
 			} else {
-				lpn = (high_bits + (1ULL << 32)) + (lpn & 0xFFFFFFFFULL);
+				lpn = high_bits | (lpn & 0x00000000FFFFFFFFULL);
 			}
-		} else {
-			lpn = high_bits + (lpn & 0xFFFFFFFFULL);
 		}
 	}
 	sa_key->next_pn = lpn;
