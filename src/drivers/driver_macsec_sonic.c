@@ -683,7 +683,7 @@ static int macsec_sonic_delete_receive_sa(void *priv, struct receive_sa *sa)
         APP_MACSEC_INGRESS_SA_TABLE_NAME,
         key);
     free(key);
-    if (ret == SONIC_DB_SUCCESS)
+    if (ret == SONIC_DB_SUCCESS && sa->enable_receive)
     {
         char * key = CREATE_SA_KEY(drv->ifname, sa, STATE_DB_SEPARATOR);
         ret = sonic_db_wait(
@@ -921,7 +921,7 @@ static int macsec_sonic_delete_transmit_sa(void *priv, struct transmit_sa *sa)
         APP_MACSEC_EGRESS_SA_TABLE_NAME,
         key);
     free(key);
-    if (ret == SONIC_DB_SUCCESS)
+    if (ret == SONIC_DB_SUCCESS && sa->enable_transmit)
     {
         char * key = CREATE_SA_KEY(drv->ifname, sa, STATE_DB_SEPARATOR);
         ret = sonic_db_wait(
