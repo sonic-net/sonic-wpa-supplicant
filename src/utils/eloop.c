@@ -39,6 +39,10 @@
 #include <sys/event.h>
 #endif /* CONFIG_ELOOP_KQUEUE */
 
+#ifndef CONFIG_NATIVE_WINDOWS
+#define SIGNAL_TERMINATION_TIMEOUT 120
+#endif
+
 struct eloop_sock {
 	int sock;
 	void *eloop_data;
@@ -962,10 +966,10 @@ int eloop_replenish_timeout(unsigned int req_secs, unsigned int req_usecs,
 static void eloop_handle_alarm(int sig)
 {
 	wpa_printf(MSG_ERROR, "eloop: could not process SIGINT or SIGTERM in "
-		   "two seconds. Looks like there\n"
+		   "%d seconds. Looks like there\n"
 		   "is a bug that ends up in a busy loop that "
 		   "prevents clean shutdown.\n"
-		   "Killing program forcefully.\n");
+		   "Killing program forcefully.\n", SIGNAL_TERMINATION_TIMEOUT);
 	exit(1);
 }
 #endif /* CONFIG_NATIVE_WINDOWS */
@@ -981,7 +985,7 @@ static void eloop_handle_signal(int sig)
 		 * would not allow the program to be killed. */
 		eloop.pending_terminate = 1;
 		signal(SIGALRM, eloop_handle_alarm);
-		alarm(2);
+		alarm(SIGNAL_TERMINATION_TIMEOUT);
 	}
 #endif /* CONFIG_NATIVE_WINDOWS */
 
