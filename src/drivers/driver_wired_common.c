@@ -40,7 +40,7 @@ static int driver_wired_get_ifflags(const char *ifname, int *flags)
 		wpa_printf(MSG_ERROR, "socket: %s", strerror(errno));
 		return -1;
 	}
-
+	wpa_printf(MSG_ERROR, "ioctl ifname: %s", ifname);
 	os_memset(&ifr, 0, sizeof(ifr));
 	os_strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
 	if (ioctl(s, SIOCGIFFLAGS, (caddr_t) &ifr) < 0) {
