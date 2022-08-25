@@ -3423,8 +3423,8 @@ static int ieee802_1x_kay_decode_mkpdu(struct ieee802_1x_kay *kay,
 		if (body_type == MKA_ICV_INDICATOR)
 			return 0;
 
-		if (kay->mka_version == MKA_VERSION_1 && body_type == MKA_XPN) {
-			wpa_printf(MSG_DEBUG, "MKA_XPN (type 8) hasn't been supported in MKA VERSION 1");
+		if (body_type == MKA_XPN) {
+			wpa_printf(MSG_DEBUG, "MKA_XPN (type 8) hasn't been supported");
 			continue;
 		}
 
