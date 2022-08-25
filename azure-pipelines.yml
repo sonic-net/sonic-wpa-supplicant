@@ -15,7 +15,7 @@ jobs:
     vmImage: 'ubuntu-20.04'
 
   container:
-    image: sonicdev-microsoft.azurecr.io:443/sonic-slave-bullseye:latest
+    image: sonicdev-microsoft.azurecr.io:443/sonic-slave-buster:latest
 
   steps:
   - script: |
@@ -32,6 +32,7 @@ jobs:
         libnl-genl-3-dev \
         libnl-route-3-dev \
         libnl-nf-3-dev \
+        swig3.0 \
         libpython2.7-dev
     displayName: "Install dependencies"
   - task: DownloadPipelineArtifact@2
@@ -63,7 +64,7 @@ jobs:
   pool: sonicbld-arm64
 
   container:
-    image: sonicdev-microsoft.azurecr.io:443/sonic-slave-bullseye-arm64:latest
+    image: sonicdev-microsoft.azurecr.io:443/sonic-slave-buster-arm64:latest
 
   steps:
   - script: |
@@ -80,6 +81,7 @@ jobs:
         libnl-genl-3-dev \
         libnl-route-3-dev \
         libnl-nf-3-dev \
+        swig3.0 \
         libpython2.7-dev
     displayName: "Install dependencies"
   - task: DownloadPipelineArtifact@2
@@ -112,7 +114,7 @@ jobs:
   pool: sonicbld-armhf
 
   container:
-    image: sonicdev-microsoft.azurecr.io:443/sonic-slave-bullseye-armhf:latest
+    image: sonicdev-microsoft.azurecr.io:443/sonic-slave-buster-armhf:latest
 
   steps:
   - script: |
@@ -129,6 +131,7 @@ jobs:
         libnl-genl-3-dev \
         libnl-route-3-dev \
         libnl-nf-3-dev \
+        swig3.0 \
         libpython2.7-dev
     displayName: "Install dependencies"
   - task: DownloadPipelineArtifact@2
