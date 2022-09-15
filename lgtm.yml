@@ -28,6 +28,8 @@ extraction:
       - "libzmq3-dev"
       - "libzmq5"
       - "libgmock-dev"
+      - "libyang"
+      - "libyang-dev"
     after_prepare:
     - "ls -l"
     - "git clone https://github.com/Azure/sonic-swss-common; pushd sonic-swss-common;\
