@@ -39,6 +39,24 @@ jobs:
     inputs:
       source: specific
       project: build
+      pipeline: Azure.sonic-buildimage.common_libs
+      runVersion: 'latestFromBranch'
+      runBranch: 'refs/heads/master'
+      path: $(Build.ArtifactStagingDirectory)/download
+      artifact: common-lib
+      patterns: |
+        target/debs/buster/libyang-*.deb
+        target/debs/buster/libyang_*.deb
+    displayName: "Download libyang from amd64 common lib"
+  - script: |
+      set -ex
+      sudo dpkg -i $(find ./download -name *.deb)
+    workingDirectory: $(Build.ArtifactStagingDirectory)
+    displayName: "Install libyang from common lib"
+  - task: DownloadPipelineArtifact@2
+    inputs:
+      source: specific
+      project: build
       pipeline: 9
       artifact: sonic-swss-common
       runVersion: 'latestFromBranch'
@@ -84,6 +102,24 @@ jobs:
         swig3.0 \
         libpython2.7-dev
     displayName: "Install dependencies"
+  - task: DownloadPipelineArtifact@2
+    inputs:
+      source: specific
+      project: build
+      pipeline: Azure.sonic-buildimage.common_libs
+      runVersion: 'latestFromBranch'
+      runBranch: 'refs/heads/master'
+      path: $(Build.ArtifactStagingDirectory)/download
+      artifact: common-lib.arm64
+      patterns: |
+        target/debs/buster/libyang-*.deb
+        target/debs/buster/libyang_*.deb
+    displayName: "Download libyang from arm64 common lib"
+  - script: |
+      set -ex
+      sudo dpkg -i $(find ./download -name *.deb)
+    workingDirectory: $(Build.ArtifactStagingDirectory)
+    displayName: "Install libyang from common lib"
   - task: DownloadPipelineArtifact@2
     inputs:
       source: specific
@@ -134,6 +170,24 @@ jobs:
         swig3.0 \
         libpython2.7-dev
     displayName: "Install dependencies"
+  - task: DownloadPipelineArtifact@2
+    inputs:
+      source: specific
+      project: build
+      pipeline: Azure.sonic-buildimage.common_libs
+      runVersion: 'latestFromBranch'
+      runBranch: 'refs/heads/master'
+      path: $(Build.ArtifactStagingDirectory)/download
+      artifact: common-lib.armhf
+      patterns: |
+        target/debs/buster/libyang-*.deb
+        target/debs/buster/libyang_*.deb
+    displayName: "Download libyang from armhf common lib"
+  - script: |
+      set -ex
+      sudo dpkg -i $(find ./download -name *.deb)
+    workingDirectory: $(Build.ArtifactStagingDirectory)
+    displayName: "Install libyang from common lib"
   - task: DownloadPipelineArtifact@2
     inputs:
       source: specific
