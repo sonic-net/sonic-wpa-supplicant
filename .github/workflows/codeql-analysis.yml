@@ -61,7 +61,7 @@ jobs:
             libboost-serialization1.71-dev \
             dh-exec \
             doxygen \
-            dbus \
+            libdbus-1-dev \
             cdbs \
             bison \
             flex \
