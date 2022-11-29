@@ -61,6 +61,7 @@ jobs:
             libboost-serialization1.71-dev \
             dh-exec \
             doxygen \
+            dbus \
             cdbs \
             bison \
             flex \
@@ -84,7 +85,7 @@ jobs:
         dpkg-deb -x libswsscommon-dev_1.0.0_amd64.deb $(dirname $GITHUB_WORKSPACE)
 
     - if: matrix.language == 'cpp'
-      name: build-swss-common
+      name: build
       run: |
         set -x
         pushd wpa_supplicant
