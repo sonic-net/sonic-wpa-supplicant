@@ -83,6 +83,7 @@ jobs:
         popd
         dpkg-deb -x libswsscommon_1.0.0_amd64.deb $(dirname $GITHUB_WORKSPACE)
         dpkg-deb -x libswsscommon-dev_1.0.0_amd64.deb $(dirname $GITHUB_WORKSPACE)
+        ls $(dirname $GITHUB_WORKSPACE)/usr/include
 
     - if: matrix.language == 'cpp'
       name: build
@@ -90,7 +91,7 @@ jobs:
         set -x
         pushd wpa_supplicant
         cp defconfig .config
-        make EXTRA_CFLAGS="-I../usr/include" LDFLAGS="-L../usr/lib/x86_64-linux-gnu"
+        make EXTRA_CFLAGS="-I$(dirname $GITHUB_WORKSPACE)/usr/include" LDFLAGS="-L$(dirname $GITHUB_WORKSPACE)/usr/lib/x86_64-linux-gnu"
         popd
 
     - name: Perform CodeQL Analysis
