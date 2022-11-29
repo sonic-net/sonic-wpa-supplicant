@@ -42,34 +42,33 @@ jobs:
       name: prepare
       run: |
         sudo apt-get update
-        sudo apt-get install -y qtbase5-dev \
-          libssl-dev \
-          dbus \
-          libdbus-1-dev \
-          libdbus-glib-1-2 \
-          libdbus-glib-1-dev \
-          libreadline-dev \
-          libncurses5-dev \
-          libpcsclite-dev \
-          docbook-to-man \
-          docbook-utils \
-          libxml-simple-perl \
-          aspell \
-          aspell-en \
-          libhiredis-dev \
-          libnl-3-dev \
-          libnl-genl-3-dev \
-          libnl-route-3-dev \
-          libnl-nf-3-dev \
-          swig3.0 \
-          libpython2.7-dev \
-          libgtest-dev \
-          dh-exec \
-          libzmq3-dev \
-          libzmq5 \
-          libgmock-dev \
-          libyang \
-          libyang-dev
+        sudo apt-get install -y libxml-simple-perl \
+            aspell \
+            aspell-en \
+            libhiredis-dev \
+            libnl-3-dev \
+            libnl-genl-3-dev \
+            libnl-route-3-dev \
+            libnl-nf-3-dev \
+            libyang-dev \
+            libzmq3-dev \
+            libzmq5 \
+            swig3.0 \
+            libpython2.7-dev \
+            libgtest-dev \
+            libgmock-dev \
+            libboost1.71-dev \
+            libboost-serialization1.71-dev \
+            dh-exec \
+            doxygen \
+            cdbs \
+            bison \
+            flex \
+            graphviz \
+            autoconf-archive \
+            uuid-dev \
+            libjansson-dev \
+            python
 
     - if: matrix.language == 'cpp'
       name: build-swss-common
