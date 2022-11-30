@@ -1,0 +1,100 @@
+# For more infomation, please visit: https://github.com/github/codeql-action
+
+name: "CodeQL"
+
+on:
+  push:
+    branches:
+      - 'master'
+      - '202[0-9][0-9][0-9]'
+  pull_request_target:
+    branches:
+      - 'master'
+      - '202[0-9][0-9][0-9]'
+  workflow_dispatch:
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-20.04
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'cpp','python' ]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    # Initializes the CodeQL tools for scanning.
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v2.1.29
+      with:
+        config-file: ./.github/codeql/codeql-config.yml
+        languages: ${{ matrix.language }}
+
+    - if: matrix.language == 'cpp'
+      name: prepare
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libxml-simple-perl \
+            aspell \
+            aspell-en \
+            libhiredis-dev \
+            libnl-3-dev \
+            libnl-genl-3-dev \
+            libnl-route-3-dev \
+            libnl-nf-3-dev \
+            libyang-dev \
+            libzmq3-dev \
+            libzmq5 \
+            swig3.0 \
+            libpython2.7-dev \
+            libgtest-dev \
+            libgmock-dev \
+            libboost1.71-dev \
+            libboost-serialization1.71-dev \
+            dh-exec \
+            doxygen \
+            libdbus-1-dev \
+            cdbs \
+            bison \
+            flex \
+            graphviz \
+            autoconf-archive \
+            uuid-dev \
+            libjansson-dev \
+            python
+
+    - if: matrix.language == 'cpp'
+      name: build-swss-common
+      run: |
+        set -x
+        cd ..
+        git clone https://github.com/Azure/sonic-swss-common
+        pushd sonic-swss-common
+        ./autogen.sh
+        fakeroot dpkg-buildpackage -us -uc -b
+        popd
+        dpkg-deb -x libswsscommon_1.0.0_amd64.deb $(dirname $GITHUB_WORKSPACE)
+        dpkg-deb -x libswsscommon-dev_1.0.0_amd64.deb $(dirname $GITHUB_WORKSPACE)
+        ls $(dirname $GITHUB_WORKSPACE)/usr/include
+
+    - if: matrix.language == 'cpp'
+      name: build
+      run: |
+        set -x
+        pushd wpa_supplicant
+        cp defconfig .config
+        make EXTRA_CFLAGS="-I$(dirname $GITHUB_WORKSPACE)/usr/include" LDFLAGS="-L$(dirname $GITHUB_WORKSPACE)/usr/lib/x86_64-linux-gnu"
+        popd
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v2.1.29
+      with:
+        category: "/language:${{matrix.language}}"
