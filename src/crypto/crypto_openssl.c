@@ -1001,8 +1001,6 @@ struct crypto_hash * crypto_hash_init(enum crypto_hash_alg alg, const u8 *key,
 	struct crypto_hash *ctx;
 	const EVP_MD *md;
 
-	wpa_printf()
-
 	switch (alg) {
 #ifndef OPENSSL_NO_MD5
 	case CRYPTO_HASH_ALG_HMAC_MD5:
