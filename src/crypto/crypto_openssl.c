@@ -325,6 +325,8 @@ void * aes_encrypt_init(const u8 *key, size_t len)
 	EVP_CIPHER_CTX *ctx;
 	const EVP_CIPHER *type;
 
+	wpa_printf(MSG_ERROR, "OpenSSL: aes_encrypt_init");
+
 	if (TEST_FAIL())
 		return NULL;
 
@@ -648,6 +650,8 @@ struct crypto_cipher * crypto_cipher_init(enum crypto_cipher_alg alg,
 {
 	struct crypto_cipher *ctx;
 	const EVP_CIPHER *cipher;
+
+	wpa_printf(MSG_ERROR, "OpenSSL: crypto_cipher_init");
 
 	ctx = os_zalloc(sizeof(*ctx));
 	if (ctx == NULL)
@@ -996,6 +1000,8 @@ struct crypto_hash * crypto_hash_init(enum crypto_hash_alg alg, const u8 *key,
 {
 	struct crypto_hash *ctx;
 	const EVP_MD *md;
+
+	wpa_printf()
 
 	switch (alg) {
 #ifndef OPENSSL_NO_MD5

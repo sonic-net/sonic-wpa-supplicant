@@ -242,6 +242,8 @@ struct crypto_hash * crypto_hash_init(enum crypto_hash_alg alg, const u8 *key,
 	struct crypto_hash *ctx;
 	const char *name;
 
+	wpa_printf(MSG_ERROR, "Linux crypto crypto_hash_init");
+
 	ctx = os_zalloc(sizeof(*ctx));
 	if (!ctx)
 		return NULL;
@@ -496,6 +498,7 @@ static int linux_af_alg_skcipher_oper(struct linux_af_alg_skcipher *skcipher,
 
 void * aes_encrypt_init(const u8 *key, size_t len)
 {
+	wpa_printf(MSG_ERROR, "Linux crypto aes_encrypt_init");
 	return linux_af_alg_skcipher("ecb(aes)", key, len);
 }
 
