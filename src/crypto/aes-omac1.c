@@ -43,6 +43,7 @@ static void gf_mulx(u8 *pad)
 int omac1_aes_vector(const u8 *key, size_t key_len, size_t num_elem,
 		     const u8 *addr[], const size_t *len, u8 *mac)
 {
+	wpa_printf(MSG_ERROR, "Self CMAC: omac1_aes_vector");
 	void *ctx;
 	u8 cbc[AES_BLOCK_SIZE], pad[AES_BLOCK_SIZE];
 	const u8 *pos, *end;
