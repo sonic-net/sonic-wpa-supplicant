@@ -1218,6 +1218,7 @@ int crypto_get_random(void *buf, size_t len)
 int omac1_aes_vector(const u8 *key, size_t key_len, size_t num_elem,
 		     const u8 *addr[], const size_t *len, u8 *mac)
 {
+	wpa_printf(MSG_ERROR, "Openssl  CMAC: omac1_aes_vector");
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
 	EVP_MAC_CTX *ctx = NULL;
 	EVP_MAC *emac;
