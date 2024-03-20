@@ -16,9 +16,10 @@
 #include <openssl/dh.h>
 #include <openssl/hmac.h>
 #include <openssl/rand.h>
-#ifdef CONFIG_OPENSSL_CMAC
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+#else /* OpenSSL version >= 3.0 */
 #include <openssl/cmac.h>
-#endif /* CONFIG_OPENSSL_CMAC */
+#endif /* OpenSSL version >= 3.0 */
 #ifdef CONFIG_ECC
 #include <openssl/ec.h>
 #include <openssl/x509.h>
