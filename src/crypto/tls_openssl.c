@@ -964,8 +964,11 @@ void * tls_init(const struct tls_config *conf)
 #ifdef OPENSSL_FIPS
 		if (conf && conf->fips_mode) {
 			static int fips_enabled = 0;
-
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+			if (!fips_enabled && !EVP_default_properties_enable_fips(NULL, 1)) {
+#else
 			if (!fips_enabled && !FIPS_mode_set(1)) {
+#endif /* OpenSSL version >= 3.0 */
 				wpa_printf(MSG_ERROR, "Failed to enable FIPS "
 					   "mode");
 				ERR_load_crypto_strings();
