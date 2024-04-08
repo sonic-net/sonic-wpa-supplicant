@@ -231,7 +231,12 @@ SM_STATE(EAP, INITIALIZE)
 	}
 
 	sm->try_initiate_reauth = false;
+#ifdef CONFIG_SONIC_HOSTAPD
+	if (!sm->eap_if.client_reauth)
+	    sm->currentId = -1;
+#else
 	sm->currentId = -1;
+#endif
 	sm->eap_if.eapSuccess = false;
 	sm->eap_if.eapFail = false;
 	sm->eap_if.eapTimeout = false;
@@ -401,6 +406,11 @@ SM_STATE(EAP, METHOD_REQUEST)
 		wpa_printf(MSG_DEBUG, "EAP: method not initialized");
 		return;
 	}
+
+#ifdef CONFIG_SONIC_HOSTAPD
+	wpa_printf(MSG_DEBUG, "EAP: lastId %d",
+		   sm->lastId);
+#endif
 
 	sm->currentId = eap_sm_nextId(sm, sm->currentId);
 	wpa_printf(MSG_DEBUG, "EAP: building EAP-Request: Identifier %d",
