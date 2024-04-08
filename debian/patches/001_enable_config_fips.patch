@@ -1,0 +1,114 @@
+diff --git a/src/crypto/crypto_openssl.c b/src/crypto/crypto_openssl.c
+index b644b6ca7..363b553fb 100644
+--- a/src/crypto/crypto_openssl.c
++++ b/src/crypto/crypto_openssl.c
+@@ -193,12 +193,16 @@ static int openssl_digest_vector(const EVP_MD *type, size_t num_elem,
+ }
+ 
+ 
+-#ifndef CONFIG_FIPS
+ int md4_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
+ {
++#ifndef CONFIG_FIPS
+ 	return openssl_digest_vector(EVP_md4(), num_elem, addr, len, mac);
+-}
++#else 
++	wpa_printf(MSG_ERROR, "OpenSSL %s: md4 is not allowed in FIPS mode", __func__);
++	return -1;
+ #endif /* CONFIG_FIPS */
++}
++
+ 
+ 
+ int des_encrypt(const u8 *clear, const u8 *key, u8 *cypher)
+@@ -264,12 +268,15 @@ out:
+ #endif /* CONFIG_NO_RC4 */
+ 
+ 
+-#ifndef CONFIG_FIPS
+ int md5_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
+ {
++#ifndef CONFIG_FIPS
+ 	return openssl_digest_vector(EVP_md5(), num_elem, addr, len, mac);
+-}
++#else 
++	wpa_printf(MSG_ERROR, "OpenSSL %s: md5 is not allowed in FIPS mode", __func__);
++	return -1;
+ #endif /* CONFIG_FIPS */
++}
+ 
+ 
+ int sha1_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
+@@ -1105,13 +1112,16 @@ done:
+ }
+ 
+ 
+-#ifndef CONFIG_FIPS
+-
+ int hmac_md5_vector(const u8 *key, size_t key_len, size_t num_elem,
+ 		    const u8 *addr[], const size_t *len, u8 *mac)
+ {
++#ifndef CONFIG_FIPS
+ 	return openssl_hmac_vector(EVP_md5(), key ,key_len, num_elem, addr, len,
+ 				   mac, 16);
++#else
++	wpa_printf(MSG_ERROR, "OpenSSL %s: md5 is not allowed in FIPS mode", __func__);
++	return -1;
++#endif /* CONFIG_FIPS */
+ }
+ 
+ 
+@@ -1121,8 +1131,6 @@ int hmac_md5(const u8 *key, size_t key_len, const u8 *data, size_t data_len,
+ 	return hmac_md5_vector(key, key_len, 1, &data, &data_len, mac);
+ }
+ 
+-#endif /* CONFIG_FIPS */
+-
+ 
+ int pbkdf2_sha1(const char *passphrase, const u8 *ssid, size_t ssid_len,
+ 		int iterations, u8 *buf, size_t buflen)
+diff --git a/src/crypto/tls_openssl.c b/src/crypto/tls_openssl.c
+index ef872c50e..783e50b23 100644
+--- a/src/crypto/tls_openssl.c
++++ b/src/crypto/tls_openssl.c
+@@ -21,6 +21,7 @@
+ #include <openssl/opensslv.h>
+ #include <openssl/pkcs12.h>
+ #include <openssl/x509v3.h>
++#include <openssl/evp.h>
+ #ifndef OPENSSL_NO_ENGINE
+ #include <openssl/engine.h>
+ #endif /* OPENSSL_NO_ENGINE */
+@@ -965,7 +966,7 @@ void * tls_init(const struct tls_config *conf)
+ 		if (conf && conf->fips_mode) {
+ 			static int fips_enabled = 0;
+ 
+-			if (!fips_enabled && !FIPS_mode_set(1)) {
++			if (!fips_enabled && !EVP_default_properties_enable_fips(NULL, 1)) {
+ 				wpa_printf(MSG_ERROR, "Failed to enable FIPS "
+ 					   "mode");
+ 				ERR_load_crypto_strings();
+diff --git a/wpa_supplicant/Makefile b/wpa_supplicant/Makefile
+index 6e50c808b..049e04347 100644
+--- a/wpa_supplicant/Makefile
++++ b/wpa_supplicant/Makefile
+@@ -4,6 +4,10 @@ ifndef CONFIG_NO_WPA_PASSPHRASE
+ BINALL += wpa_passphrase
+ endif
+ 
++ifndef CONFIG_FIPS
++CONFIG_FIPS=y
++endif
++
+ ALL = $(BINALL)
+ ALL += systemd/wpa_supplicant.service
+ ALL += systemd/wpa_supplicant@.service
+@@ -1682,7 +1686,7 @@ CFLAGS += -DCONFIG_DELAYED_MIC_ERROR_REPORT
+ endif
+ 
+ ifdef CONFIG_FIPS
+-CFLAGS += -DCONFIG_FIPS
++CFLAGS += -DCONFIG_FIPS -DOPENSSL_FIPS
+ ifneq ($(CONFIG_TLS), openssl)
+ ifneq ($(CONFIG_TLS), wolfssl)
+ $(error CONFIG_FIPS=y requires CONFIG_TLS=openssl)
