@@ -19,6 +19,9 @@
 #include "common/ieee802_11_defs.h"
 #include "radius/radius.h"
 #include "radius/radius_client.h"
+#ifdef CONFIG_SONIC_RADIUS
+#include "radius/radius_attr_parse.h"
+#endif
 #include "eap_server/eap.h"
 #include "eap_common/eap_wsc_common.h"
 #include "eapol_auth/eapol_auth_sm.h"
@@ -460,6 +463,7 @@ static int add_common_radius_sta_attr(struct hostapd_data *hapd,
 		return -1;
 	}
 
+#ifndef CONFIG_SONIC_RADIUS
 	if (sta->flags & WLAN_STA_PREAUTH) {
 		os_strlcpy(buf, "IEEE 802.11i Pre-Authentication",
 			   sizeof(buf));
@@ -487,6 +491,7 @@ static int add_common_radius_sta_attr(struct hostapd_data *hapd,
 			return -1;
 		}
 	}
+#endif
 
 	if ((hapd->conf->wpa & 2) &&
 	    !hapd->conf->disable_pmksa_caching &&
@@ -565,8 +570,13 @@ int add_common_radius_attr(struct hostapd_data *hapd,
 		return -1;
 	}
 
+#ifdef CONFIG_SONIC_RADIUS
+	len = os_snprintf(buf, sizeof(buf), RADIUS_802_1X_ADDR_FORMAT,
+			  MAC2STR(hapd->own_addr));
+#else
 	len = os_snprintf(buf, sizeof(buf), RADIUS_802_1X_ADDR_FORMAT ":",
 			  MAC2STR(hapd->own_addr));
+#endif
 	os_memcpy(&buf[len], hapd->conf->ssid.ssid,
 		  hapd->conf->ssid.ssid_len);
 	len += hapd->conf->ssid.ssid_len;
@@ -708,7 +718,13 @@ void ieee802_1x_encapsulate_radius(struct hostapd_data *hapd,
 		wpa_printf(MSG_INFO, "Could not add User-Name");
 		goto fail;
 	}
-
+#ifdef CONFIG_SONIC_RADIUS
+	else {
+	    memset(sta->attr_info.userName,'\0', sizeof(sta->attr_info.userName));
+	    strncpy(sta->attr_info.userName, sm->identity, sm->identity_len);
+	    sta->attr_info.userNameLen = sm->identity_len;
+	}
+#endif
 	if (add_common_radius_attr(hapd, hapd->conf->radius_auth_req_attr, sta,
 				   msg) < 0)
 		goto fail;
@@ -1183,6 +1199,19 @@ void ieee802_1x_receive(struct hostapd_data *hapd, const u8 *sa, const u8 *buf,
 		sta->eapol_sm->eapolLogoff = true;
 		sta->eapol_sm->dot1xAuthEapolLogoffFramesRx++;
 		eap_server_clear_identity(sta->eapol_sm->eap);
+
+#ifdef CONFIG_SONIC_HOSTAPD
+		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE8021X,
+			       HOSTAPD_LEVEL_DEBUG,
+			       "sending client_disconnect for EAPOL-Logoff from STA");
+		/* Inform PAC */
+		if (0 != hostapd_drv_auth_resp_send(hapd, hapd->conf->iface, sta->addr, "client_disconnected", NULL))
+        {
+		  hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE8021X,
+			       HOSTAPD_LEVEL_DEBUG,
+			       "sending client_disconnect for EAPOL-Logoff from STA not successful");
+        }
+#endif
 		break;
 
 	case IEEE802_1X_TYPE_EAPOL_KEY:
@@ -2006,6 +2035,14 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 			break;
 #endif /* CONFIG_NO_VLAN */
 
+#ifdef CONFIG_SONIC_RADIUS
+    if (0 != radiusClientAcceptProcess(msg, &sta->attr_info))
+    {
+      wpa_printf(MSG_DEBUG, "radiusClientAcceptProcess failed \n");
+    }
+#endif
+
+#ifndef CONFIG_SONIC_RADIUS
 		sta->session_timeout_set = !!session_timeout_set;
 		os_get_reltime(&sta->session_timeout);
 		sta->session_timeout.sec += session_timeout;
@@ -2018,6 +2055,7 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 			ap_sta_session_timeout(hapd, sta, session_timeout);
 		else
 			ap_sta_no_session_timeout(hapd, sta);
+#endif
 
 		sm->eap_if->aaaSuccess = true;
 		override_eapReq = 1;
@@ -2110,6 +2148,11 @@ void ieee802_1x_abort_auth(struct hostapd_data *hapd, struct sta_info *sta)
 			MAC2STR(sta->addr));
 
 		sm->eap_if->portEnabled = false;
+#ifdef CONFIG_SONIC_RADIUS
+		/* Invoke driver to inform PAC */
+		hostapd_drv_auth_resp_send(hapd, hapd->conf->iface, sta->addr,
+                    "auth_timeout", (void *) sta);
+#endif
 		ap_sta_disconnect(hapd, sta, sta->addr,
 				  WLAN_REASON_PREV_AUTH_NOT_VALID);
 	}
@@ -2998,5 +3041,16 @@ static void ieee802_1x_finished(struct hostapd_data *hapd,
 		 * EAPOL authentication to be started to complete connection.
 		 */
 		ap_sta_delayed_1x_auth_fail_disconnect(hapd, sta);
+
+#ifdef CONFIG_SONIC_HOSTAPD
+		/* Invoke driver to inform PAC */
+    hostapd_drv_auth_resp_send(hapd, hapd->conf->iface, sta->addr, "auth_fail", (void *) sta);
+#endif
 	}
+#ifdef CONFIG_SONIC_HOSTAPD
+ else {
+		/* Invoke driver to inform PAC */
+    hostapd_drv_auth_resp_send(hapd, hapd->conf->iface, sta->addr, "auth_success", (void *) sta);
+ }
+#endif
 }

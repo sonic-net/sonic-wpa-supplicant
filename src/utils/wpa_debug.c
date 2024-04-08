@@ -237,6 +237,9 @@ void wpa_printf(int level, const char *fmt, ...)
 			va_start(ap, fmt);
 			vprintf(fmt, ap);
 			printf("\n");
+#ifdef CONFIG_SONIC_RADIUS
+			fflush(stdout);
+#endif
 			va_end(ap);
 		}
 #endif /* CONFIG_ANDROID_LOG */
