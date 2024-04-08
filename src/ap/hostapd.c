@@ -176,8 +176,10 @@ static void hostapd_clear_old(struct hostapd_iface *iface)
 	 * allow them to use the BSS anymore.
 	 */
 	for (j = 0; j < iface->num_bss; j++) {
+#ifndef CONFIG_SONIC_HOSTAPD
 		hostapd_flush_old_stations(iface->bss[j],
 					   WLAN_REASON_PREV_AUTH_NOT_VALID);
+#endif
 #ifdef CONFIG_WEP
 		hostapd_broadcast_wep_clear(iface->bss[j]);
 #endif /* CONFIG_WEP */
@@ -186,6 +188,11 @@ static void hostapd_clear_old(struct hostapd_iface *iface)
 		/* TODO: update dynamic data based on changed configuration
 		 * items (e.g., open/close sockets, etc.) */
 		radius_client_flush(iface->bss[j]->radius, 0);
+#ifdef CONFIG_SONIC_HOSTAPD
+		radius_close_auth_sockets(iface->bss[j]->radius);
+		radius_close_acct_sockets(iface->bss[j]->radius);
+#endif
+
 #endif /* CONFIG_NO_RADIUS */
 	}
 }
@@ -2163,6 +2170,17 @@ dfs_offload:
 
 	for (j = 0; j < iface->num_bss; j++)
 		hostapd_neighbor_set_own_report(iface->bss[j]);
+	
+#ifdef CONFIG_SONIC_HOSTAPD
+#ifdef HOSTAPD
+  if (hapd->driver->auth_resp_send)
+  {
+	wpa_printf(MSG_DEBUG, "%s: Informing PAC - method_change - enable.",
+		   iface->bss[0]->conf->iface);
+    hapd->driver->auth_resp_send(hapd->conf->iface, NULL, "method_change", (void *)"enable");
+  }
+#endif
+#endif
 
 	return 0;
 
@@ -2213,6 +2231,18 @@ int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
 
 	if (err) {
 		wpa_printf(MSG_ERROR, "Interface initialization failed");
+
+#ifdef CONFIG_SONIC_HOSTAPD
+#ifdef HOSTAPD
+        if (hapd->driver->auth_resp_send)
+        {
+          wpa_printf(MSG_DEBUG, "%s: Error occured. Informing PAC - method_change - disable.",
+              iface->bss[0]->conf->iface);
+          hapd->driver->auth_resp_send(iface->bss[0]->conf->iface, NULL, "method_change", (void *)"disable");
+        }
+#endif
+#endif
+
 		hostapd_set_state(iface, HAPD_IFACE_DISABLED);
 		iface->need_to_start_in_sync = 0;
 		wpa_msg(hapd->msg_ctx, MSG_INFO, AP_EVENT_DISABLED);
@@ -2651,8 +2681,11 @@ void hostapd_interface_deinit_free(struct hostapd_iface *iface)
 	hostapd_interface_free(iface);
 }
 
-
+#ifdef CONFIG_SONIC_HOSTAPD
+void hostapd_deinit_driver(const struct wpa_driver_ops *driver,
+#else 
 static void hostapd_deinit_driver(const struct wpa_driver_ops *driver,
+#endif
 				  void *drv_priv,
 				  struct hostapd_iface *hapd_iface)
 {
@@ -2777,6 +2810,18 @@ int hostapd_disable_iface(struct hostapd_iface *hapd_iface)
 
 	wpa_printf(MSG_DEBUG, "Interface %s disabled",
 		   hapd_iface->bss[0]->conf->iface);
+	
+#ifdef CONFIG_SONIC_HOSTAPD
+#ifdef HOSTAPD
+  if (driver->auth_resp_send)
+  {
+	wpa_printf(MSG_DEBUG, "%s: Informing PAC - method_change - disable.",
+		   hapd_iface->bss[0]->conf->iface);
+    driver->auth_resp_send(hapd_iface->bss[0]->conf->iface, NULL, "method_change", (void *)"disable");
+  }
+#endif
+#endif
+
 	hostapd_set_state(hapd_iface, HAPD_IFACE_DISABLED);
 	return 0;
 }
