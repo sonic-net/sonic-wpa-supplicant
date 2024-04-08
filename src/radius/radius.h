@@ -50,6 +50,9 @@ struct radius_attr_hdr {
 
 enum { RADIUS_ATTR_USER_NAME = 1,
        RADIUS_ATTR_USER_PASSWORD = 2,
+#ifdef CONFIG_SONIC_RADIUS
+       RADIUS_ATTR_CHAP_PASSWORD = 3,
+#endif
        RADIUS_ATTR_NAS_IP_ADDRESS = 4,
        RADIUS_ATTR_NAS_PORT = 5,
        RADIUS_ATTR_SERVICE_TYPE = 6,
@@ -82,6 +85,9 @@ enum { RADIUS_ATTR_USER_NAME = 1,
        RADIUS_ATTR_ACCT_OUTPUT_GIGAWORDS = 53,
        RADIUS_ATTR_EVENT_TIMESTAMP = 55,
        RADIUS_ATTR_EGRESS_VLANID = 56,
+#ifdef CONFIG_SONIC_RADIUS
+       RADIUS_ATTR_CHAP_CHALLENGE = 60,
+#endif
        RADIUS_ATTR_NAS_PORT_TYPE = 61,
        RADIUS_ATTR_TUNNEL_TYPE = 64,
        RADIUS_ATTR_TUNNEL_MEDIUM_TYPE = 65,
@@ -91,6 +97,9 @@ enum { RADIUS_ATTR_USER_NAME = 1,
        RADIUS_ATTR_MESSAGE_AUTHENTICATOR = 80,
        RADIUS_ATTR_TUNNEL_PRIVATE_GROUP_ID = 81,
        RADIUS_ATTR_ACCT_INTERIM_INTERVAL = 85,
+#ifdef CONFIG_SONIC_RADIUS
+       RADIUS_ATTR_NAS_PORT_ID = 87,
+#endif
        RADIUS_ATTR_CHARGEABLE_USER_IDENTITY = 89,
        RADIUS_ATTR_NAS_IPV6_ADDRESS = 95,
        RADIUS_ATTR_ERROR_CAUSE = 101,
@@ -124,7 +133,11 @@ enum { RADIUS_ATTR_USER_NAME = 1,
 #define RADIUS_TERMINATION_ACTION_RADIUS_REQUEST 1
 
 /* NAS-Port-Type */
+#ifdef CONFIG_SONIC_RADIUS
+#define RADIUS_NAS_PORT_TYPE_IEEE_802_11 15
+#else
 #define RADIUS_NAS_PORT_TYPE_IEEE_802_11 19
+#endif
 
 /* Acct-Status-Type */
 #define RADIUS_ACCT_STATUS_TYPE_START 1
@@ -338,4 +351,15 @@ u8 radius_msg_find_unlisted_attr(struct radius_msg *msg, u8 *attrs);
 
 int radius_gen_session_id(u8 *id, size_t len);
 
+#ifdef CONFIG_SONIC_RADIUS
+struct radius_msg * radius_copy_resp(struct radius_msg *msg);
+int radiusAccessRequestSend(void *req_attr);
+int radius_get_resp_code(void *data, unsigned int *code);
+int radius_get_req_correlator(struct radius_msg *data, unsigned int *code);
+int radius_resp_req_map_validate(void *cxt, void *data, int msg_len);
+struct radius_msg * radius_client_update_auth_msg_data
+                  (struct radius_msg *old_msg, 
+                  const u8 *shared_secret, 
+                  size_t shared_secret_len);
+#endif
 #endif /* RADIUS_H */
