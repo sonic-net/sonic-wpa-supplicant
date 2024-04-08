@@ -315,6 +315,8 @@ static int handle_reload_iface(struct hostapd_iface *iface, void *ctx)
 /**
  * handle_reload - SIGHUP handler to reload configuration
  */
+#ifndef CONFIG_SONIC_HOSTAPD
+
 static void handle_reload(int sig, void *signal_ctx)
 {
 	struct hapd_interfaces *interfaces = signal_ctx;
@@ -323,6 +325,97 @@ static void handle_reload(int sig, void *signal_ctx)
 	hostapd_for_each_interface(interfaces, handle_reload_iface, NULL);
 }
 
+#else
+
+static void handle_reload(int sig, void *signal_ctx)
+{
+  int i;
+  struct hostapd_data *hapd;
+  struct hostapd_iface *hapd_iface = NULL;
+  struct hostapd_iface **tmp;
+  struct hapd_interfaces *interfaces = signal_ctx;
+  hostapd_json_data_t *intf_changed = (hostapd_json_data_t *)malloc(sizeof(hostapd_json_data_t));
+
+  wpa_printf(MSG_DEBUG, "Signal %d received - reloading configuration", sig);
+
+  if (!intf_changed)
+  {
+    wpa_printf(MSG_DEBUG, "couldn't allocate memory while reloading configuration");
+    return;
+  }
+  memset(intf_changed, 0, sizeof(*intf_changed));
+
+  /* read the sonic json file */
+
+  if (!hostapd_sonic_json_file_read(intf_changed))
+  {
+    /* purge the deleted interfaces */
+    for (i = 0; i < intf_changed->deleted_count; i++) {
+      hapd = hostapd_get_iface(interfaces, intf_changed->deleted_intf[i].if_name);
+
+      /* skip already deleted interface*/
+      if (!hapd)
+        continue;
+
+      if (hostapd_disable_iface(hapd->iface))
+        wpa_printf(MSG_DEBUG, "Could not disable iface");
+
+      if (hostapd_remove_iface(interfaces, hapd->conf->iface))
+        wpa_printf(MSG_DEBUG, "Could not remove iface");
+    }
+
+    unsigned int j = 0;
+    /* now reload the interfaces that are modified */
+    /*hostapd_for_each_interface(interfaces, handle_reload_iface, NULL); */
+    for (i = 0; i < intf_changed->modified_count; i++) {
+       for (j = 0; j < interfaces->count; j++)
+       {
+         hapd_iface = interfaces->iface[j];
+         if (0 == strcmp(hapd_iface->conf->bss[0]->iface, intf_changed->modified_intf[i].if_name))
+         {
+           wpa_printf(MSG_DEBUG, "Reloading  iface %s", intf_changed->modified_intf[i].if_name);
+           handle_reload_iface(interfaces->iface[j], NULL);
+         }
+       }
+    }
+
+
+    for (i = 0; i < intf_changed->new_count; i++)
+    {
+      /* append the new interfaces  and start them*/
+      hapd_iface = hostapd_interface_init(interfaces,
+          intf_changed->new_intf[i].if_name, intf_changed->new_intf[i].file_path, 0);
+      if (!hapd_iface)
+        goto clean_up;
+
+      tmp = os_realloc_array(interfaces->iface,
+          interfaces->count + 1,
+          sizeof(struct hostapd_iface *));
+      if (!tmp) {
+        hostapd_interface_deinit_free(hapd_iface);
+        goto clean_up;
+      }
+      interfaces->iface = tmp;
+      interfaces->iface[interfaces->count++] = hapd_iface;
+      if (interfaces->driver_init(hapd_iface))
+        goto clean_up;
+
+      if (hostapd_setup_interface(hapd_iface)) {
+        hostapd_deinit_driver(
+            hapd_iface->bss[0]->driver,
+            hapd_iface->bss[0]->drv_priv,
+            hapd_iface);
+        goto clean_up;
+      }
+    }
+  }
+
+clean_up:
+  free(intf_changed);
+
+  return;
+}
+#endif
 
 static void handle_dump_state(int sig, void *signal_ctx)
 {
@@ -441,6 +534,16 @@ static int hostapd_global_run(struct hapd_interfaces *ifaces, int daemonize,
 			return -1;
 		}
 	}
+
+#ifdef CONFIG_SONIC_HOSTAPD
+	if (pid_file) {
+		FILE *f = fopen(pid_file, "w");
+		if (f) {
+			fprintf(f, "%u\n", getpid());
+			fclose(f);
+		}
+	}
+#endif
 
 	eloop_run();
 
