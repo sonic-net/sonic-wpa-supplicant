@@ -4464,6 +4464,18 @@ struct wpa_driver_ops {
 	 * explicitly allow reception of broadcast Public Action frames.
 	 */
 	int (*dpp_listen)(void *priv, bool enable);
+
+#ifdef CONFIG_SONIC_HOSTAPD
+/**
+	 * auth_resp_send - send status to PAC
+	 * @intf: interface
+	 * @addr: station mac address
+	 * @status: reply status
+	 * @param: status parameters
+	 * Returns: 0 on success, -1 on failure
+	 * */
+	int (*auth_resp_send)(char *intf, u8 *addr, char *status, void *param);
+#endif
 };
 
 /**
