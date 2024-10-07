@@ -23,7 +23,9 @@
 #include "ap/wpa_auth.h"
 #include "ap/ap_config.h"
 #include "config_file.h"
-
+#ifdef CONFIG_SONIC_HOSTAPD
+#include "utils/json.h"
+#endif
 
 #ifndef CONFIG_NO_VLAN
 static int hostapd_config_read_vlan_file(struct hostapd_bss_config *bss,
@@ -4694,3 +4696,117 @@ int hostapd_set_iface(struct hostapd_config *conf,
 
 	return 0;
 }
+
+#ifdef CONFIG_SONIC_HOSTAPD
+int hostapd_sonic_json_file_read(hostapd_json_data_t *parsed_data)
+{
+  FILE *f;
+  long len;
+  char *content = NULL;
+  struct json_token *root, *deleted_interfaces, *modified_interfaces, *new_interfaces;
+  struct json_token *elem, *if_name, *if_path;
+  int rc = 0;
+  int i;  
+
+/* open the config file and read the content */
+  f=fopen(HOSTAPD_SONIC_JSON_PATH,"rb");
+  fseek(f,0,SEEK_END);
+  len=ftell(f);
+  fseek(f,0,SEEK_SET);
+
+  content=(char*)malloc(len+1);
+  if (!content) {
+    return -1;
+  }
+
+  fread(content,1,len,f);
+  fclose(f);
+ 
+  /* delete the json file */
+
+  if (remove (HOSTAPD_SONIC_JSON_PATH))
+  {
+		wpa_printf(MSG_ERROR, "json file delete failed");
+  }
+  else
+  {
+		wpa_printf(MSG_DEBUG, "json file delete successful");
+  }
+
+  root=json_parse(content, len);
+  if (!root) {
+    wpa_printf(MSG_ERROR, "Error parsing JSON !!");
+    rc = -1;
+    goto clean_up;
+  }
+
+    /* Obtain  deleted interfaces */
+    deleted_interfaces = json_get_member(root, "deleted_interfaces");
+    if (NULL != deleted_interfaces)
+    {
+     /* Read the deleted interfaces */
+      parsed_data->deleted_count = json_get_array_size(deleted_interfaces);
+     
+     for (i = 0; i < parsed_data->deleted_count; i++)
+     {
+       elem = json_get_array_item(deleted_interfaces, i);
+       if (elem)
+       {
+          if_name = json_get_member(elem, "if_name");
+          strncpy (&parsed_data->deleted_intf[i].if_name[0], if_name->string, strlen(if_name->string));
+       }
+     }
+    }
+ 
+    /* Obtain  modified interfaces */
+    modified_interfaces = json_get_member(root, "modified_interfaces");
+    if (NULL != modified_interfaces)
+    {
+      parsed_data->modified_count = json_get_array_size(modified_interfaces);
+     
+     /* Read the modified interfaces */
+     for (i = 0; i < parsed_data->modified_count; i++)
+     {
+       elem = json_get_array_item(modified_interfaces, i);
+       if (elem)
+       {
+          if_name = json_get_member(elem, "if_name");
+          strncpy (&parsed_data->modified_intf[i].if_name[0], if_name->string, strlen(if_name->string));
+          if_path = json_get_member(elem, "path");
+          strncpy (&parsed_data->modified_intf[i].file_path[0], if_path->string, strlen(if_path->string));
+       }
+     }
+    }
+  
+    /* Obtain  new interfaces */
+    new_interfaces = json_get_member(root, "new_interfaces");
+    if (NULL != new_interfaces)
+    {
+     /* Read the new interfaces */
+      parsed_data->new_count = json_get_array_size(new_interfaces);
+     
+     /* Read the modified interfaces */
+     for (i = 0; i < parsed_data->new_count; i++)
+     {
+       elem = json_get_array_item(new_interfaces, i);
+       if (elem)
+       {
+          if_name = json_get_member(elem, "if_name");
+          strncpy (&parsed_data->new_intf[i].if_name[0], if_name->string, strlen(if_name->string));
+          if_path = json_get_member(elem, "path");
+          strncpy (&parsed_data->new_intf[i].file_path[0], if_path->string, strlen(if_path->string));
+       }
+     }
+    }
+ 
+clean_up:
+
+    if (root)
+      json_free(root);
+
+    if (content)
+      free (content);
+
+    return rc;
+} 
+#endif
