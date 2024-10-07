@@ -259,4 +259,17 @@ int radius_client_get_mib(struct radius_client_data *radius, char *buf,
 void radius_client_reconfig(struct radius_client_data *radius,
 			    struct hostapd_radius_servers *conf);
 
+#ifdef CONFIG_SONIC_RADIUS
+void radius_close_auth_sockets(struct radius_client_data *radius);
+void radius_close_acct_sockets(struct radius_client_data *radius);
+
+void radius_client_receive_proces(void *cxt, RadiusType msg_type, struct radius_msg *msg, int len);
+
+int radius_resp_cb_register(struct radius_client_data *radius,
+			   RadiusType msg_type,
+			   int (*handler)(struct radius_msg *msg,
+						     int msg_len,
+						     void *data),
+			   void *data);
+#endif
 #endif /* RADIUS_CLIENT_H */
