@@ -17,6 +17,10 @@
 struct eapol_auth_config {
 	const struct eap_config *eap_cfg;
 	int eap_reauth_period;
+#ifdef CONFIG_SONIC_HOSTAPD
+	int eap_server_timeout;
+	int eap_quiet_period;
+#endif
 	int wpa;
 	int individual_wep_key_len;
 	char *eap_req_id_text; /* a copy of this will be allocated */

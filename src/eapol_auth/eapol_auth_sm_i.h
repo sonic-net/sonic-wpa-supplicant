@@ -73,7 +73,11 @@ struct eapol_state_machine {
 	unsigned int reAuthCount;
 	/* constants */
 	unsigned int quietPeriod; /* default 60; 0..65535 */
+#ifdef CONFIG_SONIC_HOSTAPD
+#define AUTH_PAE_DEFAULT_quietPeriod 2
+#else
 #define AUTH_PAE_DEFAULT_quietPeriod 60
+#endif
 	unsigned int reAuthMax; /* default 2 */
 #define AUTH_PAE_DEFAULT_reAuthMax 2
 	/* counters */

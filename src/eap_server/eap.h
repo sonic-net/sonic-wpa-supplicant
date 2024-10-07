@@ -82,6 +82,9 @@ struct eap_eapol_interface {
 	struct wpabuf *aaaEapRespData;
 	/* aaaIdentity -> eap_get_identity() */
 	bool aaaTimeout;
+#ifdef CONFIG_SONIC_HOSTAPD
+	bool client_reauth;
+#endif
 };
 
 struct eap_server_erp_key {

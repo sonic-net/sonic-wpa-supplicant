@@ -2773,6 +2773,9 @@ static int hostapd_ctrl_iface_eapol_reauth(struct hostapd_data *hapd,
 	if (!sta || !sta->eapol_sm)
 		return -1;
 
+#ifdef CONFIG_SONIC_HOSTAPD
+	memset(&sta->attr_info, 0, sizeof (sta->attr_info));
+#endif
 	eapol_auth_reauthenticate(sta->eapol_sm);
 	return 0;
 }

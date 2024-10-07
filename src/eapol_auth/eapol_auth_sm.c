@@ -168,6 +168,7 @@ static void eapol_port_timers_tick(void *eloop_ctx, void *timeout_ctx)
 		}
 	}
 
+#ifndef CONFIG_SONIC_HOSTAPD
 	if (state->reAuthWhen > 0) {
 		state->reAuthWhen--;
 		if (state->reAuthWhen == 0) {
@@ -176,6 +177,7 @@ static void eapol_port_timers_tick(void *eloop_ctx, void *timeout_ctx)
 				   MAC2STR(state->addr));
 		}
 	}
+#endif 
 
 	if (state->eap_if->retransWhile > 0) {
 		state->eap_if->retransWhile--;
@@ -241,6 +243,11 @@ SM_STATE(AUTH_PAE, DISCONNECTED)
 
 SM_STATE(AUTH_PAE, RESTART)
 {
+#ifdef CONFIG_SONIC_HOSTAPD
+#ifdef HOSTAPD
+	sm->eap_if->client_reauth = false;
+#endif
+#endif
 	if (sm->auth_pae_state == AUTH_PAE_AUTHENTICATED) {
 		if (sm->reAuthenticate)
 			sm->authAuthReauthsWhileAuthenticated++;
@@ -248,6 +255,13 @@ SM_STATE(AUTH_PAE, RESTART)
 			sm->authAuthEapStartsWhileAuthenticated++;
 		if (sm->eapolLogoff)
 			sm->authAuthEapLogoffWhileAuthenticated++;
+
+#ifdef CONFIG_SONIC_HOSTAPD
+#ifdef HOSTAPD
+		if (sm->reAuthenticate)
+	        sm->eap_if->client_reauth = true;
+#endif
+#endif
 	}
 
 	SM_ENTRY_MA(AUTH_PAE, RESTART, auth_pae);
@@ -503,8 +517,9 @@ SM_STATE(BE_AUTH, RESPONSE)
 SM_STATE(BE_AUTH, SUCCESS)
 {
 	SM_ENTRY_MA(BE_AUTH, SUCCESS, be_auth);
-
+#ifndef CONFIG_SONIC_HOSTAPD
 	txReq();
+#endif
 	sm->authSuccess = true;
 	sm->keyRun = true;
 }
@@ -513,8 +528,9 @@ SM_STATE(BE_AUTH, SUCCESS)
 SM_STATE(BE_AUTH, FAIL)
 {
 	SM_ENTRY_MA(BE_AUTH, FAIL, be_auth);
-
+#ifndef CONFIG_SONIC_HOSTAPD
 	txReq();
+#endif
 	sm->authFail = true;
 }
 
