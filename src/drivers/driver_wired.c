@@ -40,7 +40,7 @@
 #pragma pack(push, 1)
 #endif /* _MSC_VER */
 
-#if 0
+#ifndef CONFIG_SONIC_HOSTAPD
 struct ieee8023_hdr {
 	u8 dest[6];
 	u8 src[6];
