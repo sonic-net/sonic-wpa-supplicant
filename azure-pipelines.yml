@@ -15,7 +15,7 @@ jobs:
     vmImage: 'ubuntu-20.04'
 
   container:
-    image: sonicdev-microsoft.azurecr.io:443/sonic-slave-bullseye:latest
+    image: sonicdev-microsoft.azurecr.io:443/sonic-slave-bookworm:latest
 
   steps:
   - script: |
@@ -47,8 +47,8 @@ jobs:
       path: $(Build.ArtifactStagingDirectory)/download
       artifact: common-lib
       patterns: |
-        target/debs/bullseye/libyang-*.deb
-        target/debs/bullseye/libyang_*.deb
+        target/debs/bookworm/libyang-*.deb
+        target/debs/bookworm/libyang_*.deb
     displayName: "Download libyang from amd64 common lib"
   - script: |
       set -ex
@@ -84,7 +84,7 @@ jobs:
   pool: sonicbld-arm64
 
   container:
-    image: sonicdev-microsoft.azurecr.io:443/sonic-slave-bullseye-arm64:latest
+    image: sonicdev-microsoft.azurecr.io:443/sonic-slave-bookworm-arm64:latest
 
   steps:
   - script: |
@@ -116,8 +116,8 @@ jobs:
       path: $(Build.ArtifactStagingDirectory)/download
       artifact: common-lib.arm64
       patterns: |
-        target/debs/bullseye/libyang-*.deb
-        target/debs/bullseye/libyang_*.deb
+        target/debs/bookworm/libyang-*.deb
+        target/debs/bookworm/libyang_*.deb
     displayName: "Download libyang from arm64 common lib"
   - script: |
       set -ex
@@ -154,7 +154,7 @@ jobs:
   pool: sonicbld-armhf
 
   container:
-    image: sonicdev-microsoft.azurecr.io:443/sonic-slave-bullseye-armhf:latest
+    image: sonicdev-microsoft.azurecr.io:443/sonic-slave-bookworm-armhf:latest
 
   steps:
   - script: |
@@ -186,8 +186,8 @@ jobs:
       path: $(Build.ArtifactStagingDirectory)/download
       artifact: common-lib.armhf
       patterns: |
-        target/debs/bullseye/libyang-*.deb
-        target/debs/bullseye/libyang_*.deb
+        target/debs/bookworm/libyang-*.deb
+        target/debs/bookworm/libyang_*.deb
     displayName: "Download libyang from armhf common lib"
   - script: |
       set -ex
