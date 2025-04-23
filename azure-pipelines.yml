@@ -129,7 +129,7 @@ jobs:
       source: specific
       project: build
       pipeline: 9
-      artifact: sonic-swss-common.arm64
+      artifact: sonic-swss-common-bookworm.arm64
       runVersion: 'latestFromBranch'
       runBranch: 'refs/heads/master'
     displayName: "Download sonic swss common deb packages"
@@ -199,7 +199,7 @@ jobs:
       source: specific
       project: build
       pipeline: 9
-      artifact: sonic-swss-common.armhf
+      artifact: sonic-swss-common-bookworm.armhf
       runVersion: 'latestFromBranch'
       runBranch: 'refs/heads/master'
     displayName: "Download sonic swss common deb packages"
