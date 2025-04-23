@@ -60,7 +60,7 @@ jobs:
       source: specific
       project: build
       pipeline: 9
-      artifact: sonic-swss-common
+      artifact: sonic-swss-common-bookworm
       runVersion: 'latestFromBranch'
       runBranch: 'refs/heads/master'
     displayName: "Download sonic swss common deb packages"
