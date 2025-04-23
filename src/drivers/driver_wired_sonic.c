@@ -53,13 +53,6 @@ static int wpa_pac_send_data (char *buf, int bufLen)
   struct sockaddr_in client;
   socklen_t clientlen = sizeof(client);
 
-  printf("buffer: ");  
-  for (i =0; i<10; i++)
-  {
-    printf("0x%x ", ptr[i]);  
-  }
-  printf("\n");  
-
 	/* Step1: create a TCP socket */
 	fd = socket(AF_INET, SOCK_STREAM, 0); 
 	if (fd == -1)
@@ -67,7 +60,6 @@ static int wpa_pac_send_data (char *buf, int bufLen)
 		fprintf(stderr, "socket failed [%s]\n", strerror(errno));
 		return -1;
 	}
-	printf("Created a socket with fd: %d\n", fd);
 
 	/* Let us initialize the server address structure */
 	saddr.sin_family = AF_INET;         
@@ -89,16 +81,16 @@ static int wpa_pac_send_data (char *buf, int bufLen)
     sl.l_linger = 30;    /* timeout interval in seconds */
     if (-1 == setsockopt(fd, SOL_SOCKET, SO_LINGER, &sl, sizeof(sl)))
     {
-	  printf("unable to set SO_LINGER option socket with fd: %d\n", fd);
+	  wpa_printf(MSG_INFO,"unable to set SO_LINGER option socket with fd: %d\n", fd);
     }
 
     getsockname(fd, (struct sockaddr *) &client, &clientlen);
 
-	printf ("The Socket is now connected fd %d [%s:%u] \n", fd, inet_ntoa(client.sin_addr), ntohs(client.sin_port));
+	wpa_printf (MSG_INFO,"The Socket is now connected fd %d [%s:%u] \n", fd, inet_ntoa(client.sin_addr), ntohs(client.sin_port));
 
 	/* Next step: send some data */
 	ret_val = send(fd, buf, bufLen, 0);
-	printf("fd :%d  Successfully sent data (len %d bytes): %s\n", 
+	wpa_printf(MSG_INFO,"fd :%d  Successfully sent data (len %d bytes): %s\n", 
 				 fd, bufLen, buf);
 
 	/* Last step: close the socket */
@@ -389,11 +381,11 @@ int wired_driver_auth_resp_send(char *intf, u8 *addr, char *status, void *param)
 
   if (addr)
   {
-    printf("rv = %d   " MACSTR "  status %s\n", rv,  MAC2STR(addr), status);
+    wpa_printf(MSG_INFO,"rv = %d   " MACSTR "  status %s\n", rv,  MAC2STR(addr), status);
   }
   else
   {
-    printf("rv = %d status %s\n", rv,  status);
+    wpa_printf(MSG_INFO,"rv = %d status %s\n", rv,  status);
   }
 
   if (reply)
