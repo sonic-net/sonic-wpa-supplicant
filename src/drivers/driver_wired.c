@@ -90,10 +90,11 @@ static void handle_data(void *ctx, unsigned char *buf, size_t len)
 	u8 *pos, *sa;
 	size_t left;
 	union wpa_event_data event;
+#ifdef CONFIG_SONIC_HOSTAPD
 	struct sta_info *sta = NULL;
 	struct hostapd_data *hapd = ctx;
 	struct ieee802_1x_hdr *hdr_802_1x = NULL;
-
+#endif
 	/* must contain at least ieee8023_hdr 6 byte source, 6 byte dest,
 	 * 2 byte ethertype */
 	if (len < 14) {
@@ -108,6 +109,7 @@ static void handle_data(void *ctx, unsigned char *buf, size_t len)
 	case ETH_P_PAE:
 		wpa_printf(MSG_MSGDUMP, "Received EAPOL packet");
 
+#ifdef CONFIG_SONIC_HOSTAPD
     if (hapd->driver->auth_resp_send)
     {
                hostapd_logger(hapd, hdr->src, HOSTAPD_MODULE_IEEE8021X,
@@ -151,7 +153,7 @@ static void handle_data(void *ctx, unsigned char *buf, size_t len)
         return;
       }
     }
-
+#endif
 		sa = hdr->src;
 		os_memset(&event, 0, sizeof(event));
 		event.new_sta.addr = sa;
