@@ -478,7 +478,9 @@ const struct wpa_driver_ops wpa_driver_wired_ops = {
 	.get_bssid = driver_wired_get_bssid,
 	.get_capa = driver_wired_get_capa,
 #ifdef HOSTAPD
+#ifdef CONFIG_SONIC_HOSTAPD
   .auth_resp_send = wired_driver_auth_resp_send,
+#endif
 #endif
   .init = wpa_driver_wired_init,
 	.deinit = wpa_driver_wired_deinit,
