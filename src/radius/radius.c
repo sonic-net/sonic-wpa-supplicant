@@ -14,6 +14,18 @@
 #include "crypto/crypto.h"
 #include "radius.h"
 
+#ifdef CONFIG_SONIC_RADIUS
+#include "radius_attr_parse.h"
+#include "radius_client.h"
+
+#define RADIUS_KEY_MAX_LEN 65
+
+char *rulePtr;
+char *redirectAclsPtr;
+
+#define RADIUS_ATTR_VAL_IPADM               "aaa:service=ip_admission" 
+#define RADIUS_ATTR_VAL_IPDOWN              "aaa:event=acl-download" 
+#endif
 
 /**
  * struct radius_msg - RADIUS message structure for new and parsed messages
@@ -46,6 +58,11 @@ struct radius_msg {
 	 * attr_used - Total number of attributes in the array
 	 */
 	size_t attr_used;
+
+#ifdef CONFIG_SONIC_RADIUS
+	/* unique identifier to map the station */
+	unsigned int correlator;
+#endif
 };
 
 
@@ -171,6 +188,9 @@ static const struct radius_attr_type radius_attrs[] =
 {
 	{ RADIUS_ATTR_USER_NAME, "User-Name", RADIUS_ATTR_TEXT },
 	{ RADIUS_ATTR_USER_PASSWORD, "User-Password", RADIUS_ATTR_UNDIST },
+#ifdef CONFIG_SONIC_RADIUS
+	{ RADIUS_ATTR_CHAP_PASSWORD, "CHAP-Password", RADIUS_ATTR_UNDIST },
+#endif
 	{ RADIUS_ATTR_NAS_IP_ADDRESS, "NAS-IP-Address", RADIUS_ATTR_IP },
 	{ RADIUS_ATTR_NAS_PORT, "NAS-Port", RADIUS_ATTR_INT32 },
 	{ RADIUS_ATTR_SERVICE_TYPE, "Service-Type", RADIUS_ATTR_INT32 },
@@ -231,6 +251,9 @@ static const struct radius_attr_type radius_attrs[] =
 	  RADIUS_ATTR_HEXDUMP },
 	{ RADIUS_ATTR_ACCT_INTERIM_INTERVAL, "Acct-Interim-Interval",
 	  RADIUS_ATTR_INT32 },
+#ifdef CONFIG_SONIC_RADIUS
+	{ RADIUS_ATTR_NAS_PORT_ID, "NAS-Port-Id", RADIUS_ATTR_TEXT },
+#endif
 	{ RADIUS_ATTR_CHARGEABLE_USER_IDENTITY, "Chargeable-User-Identity",
 	  RADIUS_ATTR_TEXT },
 	{ RADIUS_ATTR_NAS_IPV6_ADDRESS, "NAS-IPv6-Address", RADIUS_ATTR_IPV6 },
@@ -1728,3 +1751,420 @@ int radius_gen_session_id(u8 *id, size_t len)
 	 */
 	return os_get_random(id, len);
 }
+
+#ifdef CONFIG_SONIC_RADIUS
+
+
+struct radius_msg * radius_copy_resp(struct radius_msg *in)
+{
+	struct radius_attr_hdr *attr;
+	unsigned char *pos, *end;
+        struct radius_msg *msg;
+
+	msg = os_zalloc(sizeof(*msg));
+	if (msg == NULL)
+            goto fail;
+
+	msg->buf = wpabuf_alloc_copy(in->buf->buf, in->hdr->length);
+	if (msg->buf == NULL || radius_msg_initialize(msg)) 
+		goto fail;
+    
+	msg->hdr = wpabuf_mhead(msg->buf);
+
+	/* parse attributes */
+	pos = wpabuf_mhead_u8(msg->buf) + sizeof(struct radius_hdr);
+	end = wpabuf_mhead_u8(msg->buf) + wpabuf_len(msg->buf);
+	while (pos < end) {
+		if ((size_t) (end - pos) < sizeof(*attr))
+			goto fail;
+
+		attr = (struct radius_attr_hdr *) pos;
+
+		if (attr->length > end - pos || attr->length < sizeof(*attr))
+			goto fail;
+
+		if (radius_msg_add_attr_to_array(msg, attr))
+			goto fail;
+
+		pos += attr->length;
+	}
+
+	return msg;
+
+fail:
+ if (msg)
+   radius_msg_free(msg);
+return NULL;
+
+}
+
+/**************************************************************************
+ * @purpose   Process RADIUS Accept from server
+ *
+ * @param     *clientType       @b{(input)} client type
+ * @param     *radiusMsg        @b{(input)} RADIUS message 
+ * @param     *attrInfo         @b{(output)} client attribute info
+ *
+ * @returns   0
+ * @returns   -1
+ *
+ * @comments
+ *
+ * @end
+ *************************************************************************/
+int radiusClientAcceptProcess(void *radiusMsg, attrInfo_t *attrInfo)
+{
+	radiusAttr_t *radiusAttr;
+	struct radius_msg *msg = (struct radius_msg *)radiusMsg;
+	radiusAttrParseFn_t fn;
+	int i =0;
+	struct radius_hdr *hdr = radius_msg_get_hdr(msg);
+
+  if ((NULL == attrInfo) || (NULL == msg) ||( NULL == hdr))
+  {
+    return -1;
+  }
+
+  if (0 == attrInfo->attrFlags)
+  {
+    attrInfo->terminationAction = TERMINATION_ACTION_DEFAULT;
+    attrInfo->sessionTimeout = 0;
+    memset(attrInfo->serverState, 0, SERVER_STATE_LEN);
+    attrInfo->serverStateLen = 0;
+    attrInfo->vlanAttrFlags = 0;
+    memset(attrInfo->vlanString, '\0', sizeof(attrInfo->vlanString));
+  }
+
+  rulePtr = NULL;
+  redirectAclsPtr = NULL;
+
+	for (i = 0; i < msg->attr_used; i++)
+	{
+		radiusAttr = (radiusAttr_t *)radius_get_attr_hdr(msg, i);
+
+		if (0 == radiusAttrMapEntryGet(radiusAttr->type, &fn))
+		{
+			fn(radiusAttr, attrInfo);
+		}
+	}
+	return 0;
+}
+
+struct radius_msg * radius_client_update_auth_msg_data
+                  (struct radius_msg *old_msg, 
+                  const u8 *shared_secret, 
+                  size_t shared_secret_len)
+{
+  struct radius_msg *msg = NULL;
+  unsigned int i = 0;
+  struct radius_attr_hdr *radiusAttr;
+  struct radius_hdr *hdr;
+
+  if (!old_msg)
+    return NULL;
+
+  hdr = radius_msg_get_hdr(old_msg);
+
+  if (!hdr)
+   return NULL;
+
+  msg = radius_msg_new(hdr->code, hdr->identifier);
+
+  if (!msg)
+    return NULL;
+
+  if (radius_msg_make_authenticator(msg) < 0) 
+    goto fail;
+
+  /* loop through the attributes and copy*/
+  for (i = 0; i < old_msg->attr_used; i++)
+  {
+    radiusAttr = radius_get_attr_hdr(old_msg, i);
+    if (RADIUS_ATTR_TYPE_MESSAGE_AUTHENTICATOR == radiusAttr->type)
+    {
+      continue;
+    }
+    radius_msg_copy_attr(msg, old_msg, radiusAttr->type);
+  }
+
+  msg->correlator = old_msg->correlator;
+
+  radius_msg_finish(msg, shared_secret, shared_secret_len);
+
+  radius_msg_dump(msg);
+
+  return msg;
+
+fail:
+	radius_msg_free(msg);
+	return NULL;
+}
+
+#ifdef CONFIG_SONIC_RADIUS_MAB
+
+int radiusClientChallengeProcess(void *radiusMsg, challenge_info_t *get_data)
+{
+	radiusAttr_t *radiusAttr;
+	struct radius_msg *msg = (struct radius_msg *)radiusMsg;
+	radiusAttrParseFn_t fn;
+	int i =0;
+
+	if ((!get_data) || (!get_data->attrInfo))
+	{
+		return -1;
+	}
+
+	for (i = 0; i < msg->attr_used; i++)
+	{
+		radiusAttr = (radiusAttr_t *)radius_get_attr_hdr(msg, i);
+		if (RADIUS_ATTR_TYPE_NAS_PORT == radiusAttr->type)
+		{
+			if (0 != radiusAttrNasPortValidate(get_data->nas_port, radiusAttr))
+				return -1;
+		}
+		else if (RADIUS_ATTR_TYPE_EAP_MESSAGE == radiusAttr->type)
+		{
+			if (0 != radiusAttrChallengeCopy(radiusAttr, get_data))
+				return -1;
+		}
+         else 
+         {
+                 if (0 == radiusAttrMapEntryGet(radiusAttr->type, &fn))
+                         fn(radiusAttr, get_data->attrInfo);
+         }
+
+	}
+	return 0;
+}
+
+/* new start */
+int radius_eap_attr_add(void *req_attr, struct radius_msg *msg)
+{
+	eapPacket_t *eapPkt;
+	unsigned short eapLen = 0;
+
+ if (!req_attr || !msg)
+   return -1;
+ 
+  access_req_info_t *req = (access_req_info_t *)req_attr;
+	bool firstFrag = true;
+  
+	eapPkt = (eapPacket_t *)req->supp_eap_data;
+	/* EAP-Message */
+	eapLen = eapPkt->length; /* Already endian-ized */
+	eapPkt->length = htons(eapPkt->length);
+    radius_msg_add_eap(msg, (u8 *)eapPkt, eapLen);
+
+	return 0;
+}
+
+int radius_mab_attr_add(void *req_attr, struct radius_msg *msg)
+{
+	if (!req_attr || !msg)
+		return -1;
+
+	access_req_info_t *req = (access_req_info_t *)req_attr;
+        u8 shared_secret[RADIUS_KEY_MAX_LEN];
+        size_t shared_secret_len;
+
+	if (MAB_AUTH_TYPE_PAP == req->mab_auth_type)
+	{
+		os_memset(shared_secret, 0, RADIUS_KEY_MAX_LEN);
+                /* get the current authentication server shared secret */
+                if (radius_mab_current_auth_server_key_get(req->cxt, shared_secret,
+                                                           &shared_secret_len)) {
+			return -1;
+		}
+
+	        /* user password */
+		if ((req->user_name) && (0 != req->user_name_len) &&
+                    (!radius_msg_add_attr_user_password(msg, req->user_name, req->user_name_len,
+                                                        shared_secret, shared_secret_len))) {
+			return -1;
+		}
+	}
+	else if ((MAB_AUTH_TYPE_CHAP == req->mab_auth_type) && req->challenge)
+	{
+                /* chap password */
+		if ((req->chap_password) && (0 != req->chap_password_len) &&
+                    (!radius_msg_add_attr(msg, RADIUS_ATTR_CHAP_PASSWORD,
+                                          req->chap_password, req->chap_password_len))) {
+			return -1;
+		}
+
+                /* chap challenge */
+		if (!radius_msg_add_attr(msg, RADIUS_ATTR_CHAP_CHALLENGE,
+					req->challenge, req->challenge_len)) {
+			return -1;
+		}
+	}
+
+	/* service-type */
+	if (!radius_msg_add_attr_int32(msg, RADIUS_ATTR_TYPE_SERVICE_TYPE, 
+				RADIUS_SERVICE_TYPE_CALL_CHECK))
+		return -1;
+
+	if (MAB_AUTH_TYPE_EAP_MD5 == req->mab_auth_type)
+	{
+		if (0 > radius_eap_attr_add(req_attr, msg))
+			return -1;
+	}
+
+	return 0;
+}
+
+
+int radius_access_req_common_attr_add(void *req_attr, struct radius_msg *msg)
+{
+	if (!req_attr || !msg)
+		return -1;
+
+	access_req_info_t *req = (access_req_info_t *)req_attr;
+	/* Called station */
+	if (req->calledId_len)
+	{
+		if (!radius_msg_add_attr(msg, RADIUS_ATTR_TYPE_CALLED_STATION_ID, req->calledId,
+					strlen(req->calledId)))
+			return -1;
+	}
+
+	/* Calling station */
+	if (req->callingId_len)
+	{
+		if (!radius_msg_add_attr(msg, RADIUS_ATTR_TYPE_CALLING_STATION_ID, req->callingId,
+					strlen(req->callingId)))
+			return -1;
+	}
+	/* NAS-Port */
+	if (!radius_msg_add_attr_int32(msg, RADIUS_ATTR_TYPE_NAS_PORT, 
+				req->nas_port))
+		return -1;
+
+	/* NAS-Port-ID */
+	if (!radius_msg_add_attr(msg, RADIUS_ATTR_TYPE_NAS_PORT_ID, 
+				req->nas_portid, strlen(req->nas_portid))) 
+		return -1;
+
+	/* NAS-Port-Type */
+	if (!radius_msg_add_attr_int32(msg, RADIUS_ATTR_TYPE_NAS_PORT_TYPE, 
+				RADIUS_NAS_PORT_TYPE_ETHERNET))
+		return -1;
+
+
+	/* Framed-MTU */
+	if (!radius_msg_add_attr_int32(msg, RADIUS_ATTR_TYPE_FRAMED_MTU, 
+				1500))
+		return -1;
+
+	/* State */
+	if (req->attrInfo->serverStateLen != 0)
+	{
+		if (!radius_msg_add_attr(msg, RADIUS_ATTR_TYPE_STATE, 
+					req->attrInfo->serverState, req->attrInfo->serverStateLen))
+			return -1;
+	}
+
+	/* NAS IP */
+	if (req->nas_ip.family == AF_INET)
+	{
+		if (!radius_msg_add_attr(msg, RADIUS_ATTR_TYPE_NAS_IP_ADDRESS, 
+					(u8 *) &(req->nas_ip.addr.ipv4.s_addr), 4))
+			return -1;
+	}
+
+#ifdef CONFIG_IPV6
+	/* NAS IPv6 */
+	if (req->nas_ip.family == AF_INET6)
+	{
+		if (!radius_msg_add_attr(msg, RADIUS_ATTR_TYPE_NAS_IPV6_ADDRESS, 
+					(u8 *) &(req->nas_ip.addr.ipv6.in6), 16)) 
+			return -1;
+	}
+#endif /* L7_IPV6_PACKAGE */
+
+	if (strlen(req->nas_id)) 
+	{
+		if (!radius_msg_add_attr(msg, RADIUS_ATTR_TYPE_NAS_IDENTIFIER, 
+					(u8 *) req->nas_id, strlen(req->nas_id)))
+			return -1;
+	}
+
+	return 0;
+}
+
+int radiusAccessRequestSend(void *req_attr)
+{
+	u8 radius_identifier;
+	access_req_info_t *req = (access_req_info_t *)req_attr;
+	struct radius_msg *msg;
+	
+	if (!req_attr)
+		return -1;
+   
+	if (radius_mab_server_id_get(req->cxt, &radius_identifier))
+		return -1;
+  
+	msg = radius_msg_new(RADIUS_CODE_ACCESS_REQUEST, radius_identifier);
+
+	if (!msg)
+		return -1;
+
+	if (radius_msg_make_authenticator(msg) < 0) 
+		goto fail;
+
+	/* User-Name */
+	if ((req->user_name) && (0 != req->user_name_len) &&
+            (!radius_msg_add_attr(msg, RADIUS_ATTR_USER_NAME,
+                                  req->user_name, req->user_name_len))) {
+		goto fail;
+	}
+
+	if (0 > radius_mab_attr_add(req, msg))
+		goto fail;
+
+	if (0 > radius_access_req_common_attr_add(req, msg))
+		goto fail;
+
+        msg->correlator = req->correlator;
+        req->msg_req = (void *)msg;
+
+	return 0;
+
+
+fail:
+	radius_msg_free(msg);
+	return -1;
+
+}
+
+int radius_get_resp_code(void *data, unsigned int *code)
+{
+ if ((!data) || (!code))
+    return -1;
+
+  struct radius_msg *msg = (struct radius_msg *)data;
+  struct radius_hdr *hdr = radius_msg_get_hdr(msg);
+
+  *code = hdr->code;
+  return 0;
+}
+
+int radius_get_req_correlator(struct radius_msg *data, unsigned int *code)
+{
+ if ((!data) || (!code))
+    return -1;
+
+  *code = data->correlator;
+  return 0;
+}
+
+int radius_resp_req_map_validate(void *cxt, void *data, int msg_len)
+{
+  struct radius_msg *msg = (struct radius_msg *)data;
+  radius_client_receive_proces(cxt, RADIUS_AUTH, msg, msg_len);
+  return 0;
+}
+
+#endif /* CONFIG_SONIC_RADIUS_MAB */
+
+#endif /* CONFIG_SONIC_RADIUS */

@@ -13,6 +13,12 @@
 #include "radius_client.h"
 #include "eloop.h"
 
+#ifdef CONFIG_SONIC_RADIUS
+#include <arpa/inet.h>
+#include <sys/ioctl.h>
+#include <net/if.h>
+#endif
+
 /* Defaults for RADIUS retransmit values (exponential backoff) */
 
 /**
@@ -669,7 +675,9 @@ static void radius_client_list_add(struct radius_client_data *radius,
 				   size_t shared_secret_len, const u8 *addr)
 {
 	struct radius_msg_list *entry, *prev;
-
+#ifdef CONFIG_SONIC_RADIUS
+	struct radius_hdr *hdr;
+#endif
 	if (eloop_terminated()) {
 		/* No point in adding entries to retransmit queue since event
 		 * loop has already been terminated. */
@@ -702,8 +710,16 @@ static void radius_client_list_add(struct radius_client_data *radius,
 	radius->msgs = entry;
 	radius_client_update_timeout(radius);
 
+#ifdef CONFIG_SONIC_RADIUS
+	hdr = radius_msg_get_hdr(msg);
+#endif
+
 	if (radius->num_msgs >= RADIUS_CLIENT_MAX_ENTRIES) {
+#ifdef CONFIG_SONIC_RADIUS
+		wpa_printf(MSG_INFO, "RADIUS: Removing the oldest un-ACKed packet due to retransmit list limits. num_msgs = %zd", radius->num_msgs);
+#else
 		wpa_printf(MSG_INFO, "RADIUS: Removing the oldest un-ACKed packet due to retransmit list limits");
+#endif
 		prev = NULL;
 		while (entry->next) {
 			prev = entry;
@@ -713,10 +729,18 @@ static void radius_client_list_add(struct radius_client_data *radius,
 			prev->next = NULL;
 			radius_client_msg_free(entry);
 		}
+#ifdef CONFIG_SONIC_RADIUS
+	} else {
+		radius->num_msgs++;
+	    hostapd_logger(radius->ctx, NULL, HOSTAPD_MODULE_RADIUS,
+		       HOSTAPD_LEVEL_DEBUG, "added RADIUS client to the list (type %d id=%d)"
+               " num_msgs %zu", msg_type, hdr->identifier, radius->num_msgs);
+    }
+#else
 	} else
 		radius->num_msgs++;
+#endif
 }
-
 
 /**
  * radius_client_send - Send a RADIUS request
@@ -908,8 +932,14 @@ static void radius_client_receive(int sock, void *eloop_ctx, void *sock_ctx)
 	hostapd_logger(radius->ctx, req->addr, HOSTAPD_MODULE_RADIUS,
 		       HOSTAPD_LEVEL_DEBUG,
 		       "Received RADIUS packet matched with a pending "
+#ifdef CONFIG_SONIC_RADIUS
+		       "request (type=%d id=%d), round trip time %d.%02d sec",
+		       msg_type, hdr->identifier,
+		       roundtrip / 100, roundtrip % 100);
+#else
 		       "request, round trip time %d.%02d sec",
 		       roundtrip / 100, roundtrip % 100);
+#endif
 	rconf->round_trip_time = roundtrip;
 
 	/* Remove ACKed RADIUS packet from retransmit list */
@@ -956,6 +986,141 @@ static void radius_client_receive(int sock, void *eloop_ctx, void *sock_ctx)
 	radius_msg_free(msg);
 }
 
+
+
+#ifdef CONFIG_SONIC_RADIUS
+void radius_client_receive_proces(void *cxt,
+                                  RadiusType msg_type, 
+                                  struct radius_msg *msg, int len)
+{
+	struct radius_client_data *radius = cxt;
+	struct hostapd_radius_servers *conf = radius->conf;
+	int roundtrip;
+	struct radius_hdr *hdr;
+	struct radius_rx_handler *handlers;
+	size_t num_handlers, i;
+	struct radius_msg_list *req, *prev_req;
+	struct os_reltime now;
+	struct hostapd_radius_server *rconf;
+	int invalid_authenticator = 0;
+
+	if (msg_type == RADIUS_ACCT) {
+		handlers = radius->acct_handlers;
+		num_handlers = radius->num_acct_handlers;
+		rconf = conf->acct_server;
+	} else {
+		handlers = radius->auth_handlers;
+		num_handlers = radius->num_auth_handlers;
+		rconf = conf->auth_server;
+	}
+
+	if (msg == NULL) {
+		wpa_printf(MSG_INFO, "RADIUS: Parsing incoming frame failed");
+		rconf->malformed_responses++;
+		return;
+	}
+	hdr = radius_msg_get_hdr(msg);
+
+	hostapd_logger(radius->ctx, NULL, HOSTAPD_MODULE_RADIUS,
+		       HOSTAPD_LEVEL_DEBUG, "checking associated req for (type %d id = %d)", msg_type, hdr->identifier);
+	if (conf->msg_dumps)
+		radius_msg_dump(msg);
+
+	prev_req = NULL;
+	req = radius->msgs;
+
+    if (!req)
+	{
+	  hostapd_logger(radius->ctx, NULL, HOSTAPD_MODULE_RADIUS,
+		  HOSTAPD_LEVEL_DEBUG, "Req is NULL while checking"
+		  "associated req for (type %d id = %d)", msg_type, hdr->identifier);
+	}
+	while (req) {
+		/* TODO: also match by src addr:port of the packet when using
+		 * alternative RADIUS servers (?) */
+
+         if ((req) && (req == req->next))
+         {
+           wpa_printf(MSG_DEBUG, "%s: RADIUS: exiting circular loop", __func__);
+           goto fail;
+         }
+
+		if (req->msg_type == msg_type && 
+		    radius_msg_get_hdr(req->msg)->identifier ==
+		    hdr->identifier)
+			break;
+
+		prev_req = req;
+		req = req->next;
+	}
+
+	if (req == NULL) {
+		hostapd_logger(radius->ctx, NULL, HOSTAPD_MODULE_RADIUS,
+			       HOSTAPD_LEVEL_DEBUG,
+			       "No matching RADIUS request found (type=%d "
+			       "id=%d) - dropping packet",
+			       msg_type, hdr->identifier);
+		goto fail;
+	}
+
+	os_get_reltime(&now);
+	roundtrip = (now.sec - req->last_attempt.sec) * 100 +
+		(now.usec - req->last_attempt.usec) / 10000;
+	hostapd_logger(radius->ctx, req->addr, HOSTAPD_MODULE_RADIUS,
+		       HOSTAPD_LEVEL_DEBUG,
+		       "Received RADIUS packet matched with a pending "
+		       "request (type=%d id=%d), round trip time %d.%02d sec",
+		       msg_type, hdr->identifier,
+		       roundtrip / 100, roundtrip % 100);
+	rconf->round_trip_time = roundtrip;
+
+	/* Remove ACKed RADIUS packet from retransmit list */
+	if (prev_req)
+		prev_req->next = req->next;
+	else
+		radius->msgs = req->next;
+			if (radius->num_msgs > 0)
+                 {
+                   radius->num_msgs--;
+                 }
+                 else
+                 {
+                   wpa_printf(MSG_DEBUG, "%s: RADIUS: num messages equal to 0, cannot decrement further", __func__);
+                 }
+
+	for (i = 0; i < num_handlers; i++) {
+		RadiusRxResult res;
+		res = handlers[i].handler(msg, req->msg, req->shared_secret,
+					  req->shared_secret_len,
+					  handlers[i].data);
+		switch (res) {
+		case RADIUS_RX_PROCESSED:
+			radius_msg_free(msg);
+			/* fall through */
+		case RADIUS_RX_QUEUED:
+			radius_client_msg_free(req);
+			return;
+		case RADIUS_RX_INVALID_AUTHENTICATOR:
+			invalid_authenticator++;
+			/* fall through */
+		case RADIUS_RX_UNKNOWN:
+			/* continue with next handler */
+			break;
+		}
+	}
+
+	hostapd_logger(radius->ctx, req->addr, HOSTAPD_MODULE_RADIUS,
+		       HOSTAPD_LEVEL_DEBUG, "No RADIUS RX handler found "
+		       "(type=%d code=%d id=%d)%s - dropping packet",
+		       msg_type, hdr->code, hdr->identifier,
+		       invalid_authenticator ? " [INVALID AUTHENTICATOR]" :
+		       "");
+	radius_client_msg_free(req);
+
+ fail:
+	radius_msg_free(msg);
+}
+#endif
 
 /**
  * radius_client_get_id - Get an identifier for a new RADIUS message
@@ -1056,6 +1221,43 @@ static void radius_client_update_acct_msgs(struct radius_client_data *radius,
 	}
 }
 
+#ifdef CONFIG_SONIC_RADIUS
+int radius_client_update_auth_msgs(struct radius_client_data *radius,
+					   const u8 *shared_secret,
+					   size_t shared_secret_len)
+{
+  struct radius_msg *temp;
+  struct radius_msg *msg = NULL;
+  struct radius_msg_list *entry;
+
+
+  if (!radius)
+    return -1;
+
+  for (entry = radius->msgs; entry; entry = entry->next) {
+    if (entry->msg_type == RADIUS_AUTH) {
+      msg = NULL;
+      msg = radius_client_update_auth_msg_data(entry->msg, shared_secret,
+          shared_secret_len);
+      if (!msg)
+        goto msg_clean;
+      /* swap the msg pointers and update the entry details */
+      temp = entry->msg;
+      entry->msg = msg;
+
+      radius_msg_free(temp);
+      entry->shared_secret = shared_secret;
+      entry->shared_secret_len = shared_secret_len;
+    }
+  }
+
+  return 0;
+
+msg_clean:
+  radius_msg_free(msg);
+  return -1;
+}
+#endif
 
 static int
 radius_change_server(struct radius_client_data *radius,
@@ -1102,7 +1304,18 @@ radius_change_server(struct radius_client_data *radius,
 		 * missing state information. Client will likely retry
 		 * authentication, so this should not be an issue. */
 		if (auth)
-			radius_client_flush(radius, 1);
+        {
+#ifdef CONFIG_SONIC_RADIUS
+	if (radius->msgs) {
+		eloop_cancel_timeout(radius_client_timer, radius, NULL);
+	}
+         radius_client_update_auth_msgs(
+				radius, nserv->shared_secret,
+				nserv->shared_secret_len);
+#else
+			radius_client_flush(radius, 1); 
+#endif
+        }
 		else {
 			radius_client_update_acct_msgs(
 				radius, nserv->shared_secret,
@@ -1293,8 +1506,11 @@ static int radius_client_disable_pmtu_discovery(int s)
 	return r;
 }
 
-
+#ifdef CONFIG_SONIC_RADIUS
+void radius_close_auth_sockets(struct radius_client_data *radius)
+#else
 static void radius_close_auth_sockets(struct radius_client_data *radius)
+#endif
 {
 	radius->auth_sock = -1;
 
@@ -1312,8 +1528,11 @@ static void radius_close_auth_sockets(struct radius_client_data *radius)
 #endif /* CONFIG_IPV6 */
 }
 
-
+#ifdef CONFIG_SONIC_RADIUS
+void radius_close_acct_sockets(struct radius_client_data *radius)
+#else
 static void radius_close_acct_sockets(struct radius_client_data *radius)
+#endif
 {
 	radius->acct_sock = -1;
 
