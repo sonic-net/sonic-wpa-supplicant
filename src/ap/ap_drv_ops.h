@@ -391,4 +391,15 @@ hostapd_drv_set_band(struct hostapd_data *hapd, enum set_band band)
 	return hapd->driver->set_band(hapd->drv_priv, band);
 }
 
+#ifdef CONFIG_SONIC_HOSTAPD
+static inline int
+hostapd_drv_auth_resp_send(struct hostapd_data *hapd, char *intf, u8 *addr,
+                           char *status, void *param)
+{
+	if (!hapd->driver || !hapd->driver->auth_resp_send)
+		return -1;
+	return hapd->driver->auth_resp_send(intf, addr, status, param);
+}
+#endif
+
 #endif /* AP_DRV_OPS */
