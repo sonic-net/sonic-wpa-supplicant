@@ -182,6 +182,10 @@ CFLAGS += -DHOSTAPD_DUMP_STATE
 OBJS += ../src/eapol_auth/eapol_auth_dump.o
 endif
 
+ifdef CONFIG_SONIC_HOSTAPD
+CFLAGS += -DCONFIG_SONIC_HOSTAPD
+endif
+
 ifdef CONFIG_NO_RADIUS
 CFLAGS += -DCONFIG_NO_RADIUS
 CONFIG_NO_ACCOUNTING=y
@@ -189,6 +193,10 @@ else
 OBJS += ../src/radius/radius.o
 OBJS += ../src/radius/radius_client.o
 OBJS += ../src/radius/radius_das.o
+ifdef CONFIG_SONIC_RADIUS
+CFLAGS += -DCONFIG_SONIC_RADIUS
+OBJS += ../src/radius/radius_attr_parse.o
+endif
 endif
 
 ifdef CONFIG_NO_ACCOUNTING

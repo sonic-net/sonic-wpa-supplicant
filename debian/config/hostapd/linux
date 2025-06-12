@@ -385,3 +385,10 @@ CONFIG_SAE=y
 # Override default value for the wpa_disable_eapol_key_retries configuration
 # parameter. See that parameter in hostapd.conf for more details.
 #CFLAGS += -DDEFAULT_WPA_DISABLE_EAPOL_KEY_RETRIES=1
+#
+# SONIC HOSTAPD
+CONFIG_SONIC_HOSTAPD=y
+
+# SONIC RADIUS attribute parser
+CONFIG_SONIC_RADIUS=y
+# #
