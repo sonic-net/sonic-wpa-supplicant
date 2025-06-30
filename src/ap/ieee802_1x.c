@@ -591,7 +591,11 @@ int add_common_radius_attr(struct hostapd_data *hapd,
 	if (!hostapd_config_get_radius_attr(req_attr,
 					    RADIUS_ATTR_NAS_PORT_TYPE) &&
 	    !radius_msg_add_attr_int32(msg, RADIUS_ATTR_NAS_PORT_TYPE,
+#ifdef CONFIG_SONIC_RADIUS
+				       RADIUS_NAS_PORT_TYPE_IEEE_ETHERNET)) {
+#else
 				       RADIUS_NAS_PORT_TYPE_IEEE_802_11)) {
+#endif
 		wpa_printf(MSG_ERROR, "Could not add NAS-Port-Type");
 		return -1;
 	}
