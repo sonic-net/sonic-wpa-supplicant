@@ -49,6 +49,7 @@ jobs:
       patterns: |
         target/debs/bookworm/libyang-*.deb
         target/debs/bookworm/libyang_*.deb
+        target/debs/bookworm/libyang3*.deb
     displayName: "Download libyang from amd64 common lib"
   - script: |
       set -ex
