@@ -53,12 +53,12 @@ jobs:
             libyang-dev \
             libzmq3-dev \
             libzmq5 \
-            swig3.0 \
-            libpython2.7-dev \
+            swig \
+            libpython3-dev \
             libgtest-dev \
             libgmock-dev \
-            libboost1.71-dev \
-            libboost-serialization1.71-dev \
+            libboost-dev \
+            libboost-serialization-dev \
             dh-exec \
             doxygen \
             libdbus-1-dev \
@@ -69,8 +69,9 @@ jobs:
             autoconf-archive \
             uuid-dev \
             libjansson-dev \
-            python \
-            nlohmann-json3-dev
+            python3 \
+            nlohmann-json3-dev \
+            cargo
 
     - if: matrix.language == 'cpp'
       name: build-swss-common
@@ -80,7 +81,7 @@ jobs:
         git clone https://github.com/Azure/sonic-swss-common
         pushd sonic-swss-common
         ./autogen.sh
-        fakeroot dpkg-buildpackage -us -uc -b
+        dpkg-buildpackage -rfakeroot -us -uc -b -Pnoyangmod,nopython2 -j$(nproc)
         popd
         dpkg-deb -x libswsscommon_1.0.0_amd64.deb $(dirname $GITHUB_WORKSPACE)
         dpkg-deb -x libswsscommon-dev_1.0.0_amd64.deb $(dirname $GITHUB_WORKSPACE)
