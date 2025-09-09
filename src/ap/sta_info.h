@@ -14,6 +14,9 @@
 #include "vlan.h"
 #include "common/wpa_common.h"
 #include "common/ieee802_11_defs.h"
+#ifdef CONFIG_SONIC_RADIUS
+#include "radius/radius_attr_parse.h"
+#endif
 
 /* STA flags */
 #define WLAN_STA_AUTH BIT(0)
@@ -286,6 +289,9 @@ struct sta_info {
 	unsigned int airtime_weight;
 	struct os_reltime backlogged_until;
 #endif /* CONFIG_AIRTIME_POLICY */
+#ifdef CONFIG_SONIC_RADIUS
+	attrInfo_t attr_info;
+#endif
 };
 
 

@@ -13,6 +13,13 @@
 #include "eloop.h"
 #include "driver.h"
 #include "driver_wired_common.h"
+#include "common/eapol_common.h"
+#ifdef CONFIG_SONIC_HOSTAPD
+#ifdef HOSTAPD
+#include "ap/hostapd.h"
+#include "ap/sta_info.h"
+#endif
+#endif
 
 #include <sys/ioctl.h>
 #undef IFNAMSIZ
@@ -33,21 +40,20 @@
 #pragma pack(push, 1)
 #endif /* _MSC_VER */
 
-struct ieee8023_hdr {
-	u8 dest[6];
-	u8 src[6];
-	u16 ethertype;
-} STRUCT_PACKED;
-
 #ifdef _MSC_VER
 #pragma pack(pop)
 #endif /* _MSC_VER */
 
+#ifdef HOSTAPD
+extern int wired_driver_auth_resp_send(char *intf, u8 *addr, char *status, void *param);
+#endif
 
 struct wpa_driver_wired_data {
 	struct driver_wired_common_data common;
 
+#ifndef CONFIG_SONIC_HOSTAPD
 	int dhcp_sock; /* socket for dhcp packets */
+#endif
 	int use_pae_group_addr;
 };
 
@@ -84,7 +90,11 @@ static void handle_data(void *ctx, unsigned char *buf, size_t len)
 	u8 *pos, *sa;
 	size_t left;
 	union wpa_event_data event;
-
+#ifdef CONFIG_SONIC_HOSTAPD
+	struct sta_info *sta = NULL;
+	struct hostapd_data *hapd = ctx;
+	struct ieee802_1x_hdr *hdr_802_1x = NULL;
+#endif
 	/* must contain at least ieee8023_hdr 6 byte source, 6 byte dest,
 	 * 2 byte ethertype */
 	if (len < 14) {
@@ -98,6 +108,52 @@ static void handle_data(void *ctx, unsigned char *buf, size_t len)
 	switch (ntohs(hdr->ethertype)) {
 	case ETH_P_PAE:
 		wpa_printf(MSG_MSGDUMP, "Received EAPOL packet");
+
+#ifdef CONFIG_SONIC_HOSTAPD
+    if (hapd->driver->auth_resp_send)
+    {
+               hostapd_logger(hapd, hdr->src, HOSTAPD_MODULE_IEEE8021X,
+                   HOSTAPD_LEVEL_DEBUG,
+                   "Received EAPOL packet. Get the associated station");
+
+      sta = ap_get_sta(hapd, hdr->src);
+
+      pos = (u8 *) (hdr + 1);
+      hdr_802_1x = (struct ieee802_1x_hdr *)pos;
+
+      if (!sta){
+        if (IEEE802_1X_TYPE_EAPOL_START == hdr_802_1x->type) {
+
+          /* Inform PAC */
+               hostapd_logger(hapd, hdr->src, HOSTAPD_MODULE_IEEE8021X,
+                   HOSTAPD_LEVEL_DEBUG,
+                   "Received EAPOL START packet. Informing PAC");
+          hapd->driver->auth_resp_send(hapd->conf->iface, hdr->src, "new_client", NULL);
+        }
+        else if (IEEE802_1X_TYPE_EAPOL_LOGOFF == hdr_802_1x->type)
+        {
+          /* Inform PAC */
+               hostapd_logger(hapd, hdr->src, HOSTAPD_MODULE_IEEE8021X,
+                   HOSTAPD_LEVEL_DEBUG,
+                   "Received EAPOL LOGOFF packet. Informing PAC");
+
+          hapd->driver->auth_resp_send(hapd->conf->iface, hdr->src, "client_disconnected", NULL);
+        }
+        return;
+      }
+
+      /* check if the client is getting de-authenticated.
+         if yes, then ignore any triggers during this state */
+
+	  if (sta->flags & WLAN_STA_PENDING_DEAUTH_CB)
+      {
+        hostapd_logger(hapd, hdr->src, HOSTAPD_MODULE_IEEE8021X,
+            HOSTAPD_LEVEL_DEBUG,
+            "Received EAPOL packet of type %d while client is getting de-authenticated. Ignoring EAPOL packet", hdr_802_1x->type);
+        return;
+      }
+    }
+#endif
 		sa = hdr->src;
 		os_memset(&event, 0, sizeof(event));
 		event.new_sta.addr = sa;
@@ -131,7 +187,7 @@ static void handle_read(int sock, void *eloop_ctx, void *sock_ctx)
 	handle_data(eloop_ctx, buf, len);
 }
 
-
+#ifndef CONFIG_SONIC_HOSTAPD
 static void handle_dhcp(int sock, void *eloop_ctx, void *sock_ctx)
 {
 	int len;
@@ -162,6 +218,7 @@ static void handle_dhcp(int sock, void *eloop_ctx, void *sock_ctx)
 	event.new_sta.addr = mac_address;
 	wpa_supplicant_event(eloop_ctx, EVENT_NEW_STA, &event);
 }
+#endif
 #endif /* __linux__ */
 
 
@@ -170,8 +227,15 @@ static int wired_init_sockets(struct wpa_driver_wired_data *drv, u8 *own_addr)
 #ifdef __linux__
 	struct ifreq ifr;
 	struct sockaddr_ll addr;
+
+#ifndef CONFIG_SONIC_HOSTAPD
 	struct sockaddr_in addr2;
 	int n = 1;
+#endif
+
+#define SOCK_RCV_BUF_LEN  (1024 * 1024)
+
+    int recv_buf_len = SOCK_RCV_BUF_LEN;
 
 	drv->common.sock = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_PAE));
 	if (drv->common.sock < 0) {
@@ -180,12 +244,21 @@ static int wired_init_sockets(struct wpa_driver_wired_data *drv, u8 *own_addr)
 		return -1;
 	}
 
+    if (setsockopt(drv->common.sock, SOL_SOCKET, SO_RCVBUF, &recv_buf_len, sizeof(recv_buf_len)) == -1)
+    {
+		wpa_printf(MSG_INFO, "Could not set the read socket buffer size");
+        close(drv->common.sock);
+        return -1;
+    }
+
 	if (eloop_register_read_sock(drv->common.sock, handle_read,
 				     drv->common.ctx, NULL)) {
 		wpa_printf(MSG_INFO, "Could not register read socket");
 		return -1;
 	}
 
+	wpa_printf(MSG_DEBUG, "Getting the ifindex for interface  %s",
+		   drv->common.ifname);
 	os_memset(&ifr, 0, sizeof(ifr));
 	os_strlcpy(ifr.ifr_name, drv->common.ifname, sizeof(ifr.ifr_name));
 	if (ioctl(drv->common.sock, SIOCGIFINDEX, &ifr) != 0) {
@@ -229,6 +302,7 @@ static int wired_init_sockets(struct wpa_driver_wired_data *drv, u8 *own_addr)
 	}
 	os_memcpy(own_addr, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
 
+#ifndef CONFIG_SONIC_HOSTAPD
 	/* setup dhcp listen socket for sta detection */
 	if ((drv->dhcp_sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
 		wpa_printf(MSG_ERROR, "socket call failed for dhcp: %s",
@@ -275,7 +349,7 @@ static int wired_init_sockets(struct wpa_driver_wired_data *drv, u8 *own_addr)
 		wpa_printf(MSG_ERROR, "bind: %s", strerror(errno));
 		return -1;
 	}
-
+#endif
 	return 0;
 #else /* __linux__ */
 	return -1;
@@ -322,7 +396,6 @@ static int wired_send_eapol(void *priv, const u8 *addr,
 	return res;
 }
 
-
 static void * wired_driver_hapd_init(struct hostapd_data *hapd,
 				     struct wpa_init_params *params)
 {
@@ -338,16 +411,18 @@ static void * wired_driver_hapd_init(struct hostapd_data *hapd,
 	drv->common.ctx = hapd;
 	os_strlcpy(drv->common.ifname, params->ifname,
 		   sizeof(drv->common.ifname));
+		wpa_printf(MSG_INFO,
+			   "drv->common.ifname received is %s", drv->common.ifname);
+
 	drv->use_pae_group_addr = params->use_pae_group_addr;
 
 	if (wired_init_sockets(drv, params->own_addr)) {
 		os_free(drv);
 		return NULL;
 	}
-
+	
 	return drv;
 }
-
 
 static void wired_driver_hapd_deinit(void *priv)
 {
@@ -357,12 +432,13 @@ static void wired_driver_hapd_deinit(void *priv)
 		eloop_unregister_read_sock(drv->common.sock);
 		close(drv->common.sock);
 	}
-
+#ifndef CONFIG_SONIC_HOSTAPD
 	if (drv->dhcp_sock >= 0) {
 		eloop_unregister_read_sock(drv->dhcp_sock);
 		close(drv->dhcp_sock);
 	}
-
+#endif
+	
 	os_free(drv);
 }
 
@@ -392,7 +468,6 @@ static void wpa_driver_wired_deinit(void *priv)
 	os_free(drv);
 }
 
-
 const struct wpa_driver_ops wpa_driver_wired_ops = {
 	.name = "wired",
 	.desc = "Wired Ethernet driver",
@@ -402,6 +477,11 @@ const struct wpa_driver_ops wpa_driver_wired_ops = {
 	.get_ssid = driver_wired_get_ssid,
 	.get_bssid = driver_wired_get_bssid,
 	.get_capa = driver_wired_get_capa,
-	.init = wpa_driver_wired_init,
+#ifdef HOSTAPD
+#ifdef CONFIG_SONIC_HOSTAPD
+  .auth_resp_send = wired_driver_auth_resp_send,
+#endif
+#endif
+  .init = wpa_driver_wired_init,
 	.deinit = wpa_driver_wired_deinit,
 };

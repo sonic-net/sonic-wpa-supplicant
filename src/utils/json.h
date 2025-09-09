@@ -53,5 +53,8 @@ void json_end_object(struct wpabuf *json);
 void json_start_array(struct wpabuf *json, const char *name);
 void json_end_array(struct wpabuf *json);
 void json_value_sep(struct wpabuf *json);
-
+#ifdef CONFIG_SONIC_HOSTAPD
+int  json_get_array_size(struct json_token *array);
+struct json_token* json_get_array_item(struct json_token *array, int index);
+#endif
 #endif /* JSON_H */

@@ -18,6 +18,10 @@ DRV_OBJS += ../src/drivers/driver_wired.o
 NEED_DRV_WIRED_COMMON=1
 endif
 
+ifdef CONFIG_SONIC_HOSTAPD
+DRV_OBJS += ../src/drivers/driver_wired_sonic.o
+endif
+
 ifdef CONFIG_DRIVER_MACSEC_SONIC
 DRV_CFLAGS += -DCONFIG_DRIVER_MACSEC_SONIC
 DRV_OBJS += ../src/drivers/driver_macsec_sonic.o

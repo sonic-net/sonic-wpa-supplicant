@@ -688,3 +688,45 @@ void json_value_sep(struct wpabuf *json)
 {
 	wpabuf_put_u8(json, ',');
 }
+
+#ifdef CONFIG_SONIC_HOSTAPD
+int json_get_array_size(struct json_token *array)
+{
+    struct json_token *child = NULL;
+    int size = 0;
+
+    if (array == NULL)
+    {
+        return 0;
+    }
+
+    child = array->child;
+
+    while(child != NULL)
+    {
+        size++;
+        child = child->sibling;
+    }
+
+    return (int)size;
+}
+
+struct json_token* json_get_array_item(struct json_token *array, int index)
+{
+    struct json_token *current_child = NULL;
+
+    if ((array == NULL) || (index < 0))
+    {
+        return NULL;
+    }
+
+    current_child = array->child;
+    while ((current_child != NULL) && (index > 0))
+    {
+        index--;
+        current_child = current_child->sibling;
+    }
+
+    return current_child;
+}
+#endif
