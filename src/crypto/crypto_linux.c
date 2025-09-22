@@ -23,6 +23,19 @@
 #endif /* SOL_ALG */
 
 
+/**
+ * is_fips_ready - Check FIPS POST status.
+ * Returns: 0 on success, -1 on failure.
+ */
+int is_fips_ready(char *crypto_name, const size_t name_len)
+{
+	/* Not supported */
+	wpa_printf(MSG_ERROR, "POST validation not implemented for linux");
+	if (crypto_name)
+		snprintf(crypto_name, name_len, "linux");
+	return -1;
+}
+
 static int linux_af_alg_socket(const char *type, const char *name)
 {
 	struct sockaddr_alg sa;

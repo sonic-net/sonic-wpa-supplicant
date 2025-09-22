@@ -26,6 +26,19 @@
 #include "crypto.h"
 
 
+/**
+ * is_fips_ready - Check FIPS POST status.
+ * Returns: 0 on success, -1 on failure.
+ */
+int is_fips_ready(char *crypto_name, const size_t name_len)
+{
+	/* Not supported */
+	wpa_printf(MSG_ERROR, "POST validation not implemented for nettle");
+	if (crypto_name)
+		snprintf(crypto_name, name_len, "nettle");
+	return -1;
+}
+
 int des_encrypt(const u8 *clear, const u8 *key, u8 *cypher)
 {
 	struct des_ctx ctx;

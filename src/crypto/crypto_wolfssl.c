@@ -28,6 +28,18 @@
 #include <wolfssl/wolfcrypt/ecc.h>
 #include <wolfssl/openssl/bn.h>
 
+/**
+ * is_fips_ready - Check FIPS POST status.
+ * Returns: 0 on success, -1 on failure.
+ */
+int is_fips_ready(char *crypto_name, const size_t name_len)
+{
+	/* Not supported */
+	wpa_printf(MSG_ERROR, "POST validation not implemented for wolfSSL");
+	if (crypto_name)
+		snprintf(crypto_name, name_len, "wolfssl");
+	return -1;
+}
 
 #ifndef CONFIG_FIPS
 

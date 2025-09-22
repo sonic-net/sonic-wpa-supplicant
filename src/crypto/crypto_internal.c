@@ -35,6 +35,18 @@ struct crypto_hash {
 	size_t key_len;
 };
 
+/**
+ * is_fips_ready - Check FIPS POST status.
+ * Returns: 0 on success, -1 on failure.
+ */
+int is_fips_ready(char *crypto_name, const size_t name_len)
+{
+	/* Not supported */
+	wpa_printf(MSG_ERROR, "POST not implemented by internal crypto");
+	if (crypto_name)
+		snprintf(crypto_name, name_len, "internal");
+	return -1;
+}
 
 struct crypto_hash * crypto_hash_init(enum crypto_hash_alg alg, const u8 *key,
 				      size_t key_len)

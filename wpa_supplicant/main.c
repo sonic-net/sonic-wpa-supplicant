@@ -16,7 +16,7 @@
 #include "wpa_supplicant_i.h"
 #include "driver_i.h"
 #include "p2p_supplicant.h"
-
+#include "crypto/crypto.h"
 
 static void usage(void)
 {
@@ -71,6 +71,7 @@ static void usage(void)
 #ifdef CONFIG_DEBUG_FILE
 	       "  -f = log output to debug file instead of stdout\n"
 #endif /* CONFIG_DEBUG_FILE */
+	       "  -F = show FIPS POST status\n"
 	       "  -g = global ctrl_interface\n"
 	       "  -G = global ctrl_interface group\n"
 	       "  -h = show this help text\n"
@@ -201,7 +202,7 @@ int main(int argc, char *argv[])
 
 	for (;;) {
 		c = getopt(argc, argv,
-			   "b:Bc:C:D:de:f:g:G:hi:I:KLMm:No:O:p:P:qsTtuvW");
+			   "b:Bc:C:D:de:Ff:g:G:hi:I:KLMm:No:O:p:P:qsTtuvW");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -331,6 +332,13 @@ int main(int argc, char *argv[])
 			iface = &ifaces[iface_count - 1];
 			os_memset(iface, 0, sizeof(*iface));
 			break;
+		case 'F':
+			char crypto_name[64]={0};
+			int status = is_fips_ready(crypto_name, sizeof(crypto_name));
+			printf("FIPS POST status: %s (crypto backend: %s)\n",
+			       status==0 ? "pass":"fail", crypto_name);
+			exitcode = 0;
+			goto out;
 		default:
 			usage();
 			exitcode = 0;

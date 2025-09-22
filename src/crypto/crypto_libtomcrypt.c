@@ -22,6 +22,19 @@
 #endif
 
 
+/**
+ * is_fips_ready - Check FIPS POST status.
+ * Returns: 0 on success, -1 on failure.
+ */
+int is_fips_ready(char *crypto_name, const size_t name_len)
+{
+	/* Not supported */
+	wpa_printf(MSG_ERROR, "POST validation not implemented for tomcrypt");
+	if (crypto_name)
+		snprintf(crypto_name, name_len, "tomcrypt");
+	return -1;
+}
+
 int md4_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 {
 	hash_state md;

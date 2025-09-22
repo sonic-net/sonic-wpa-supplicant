@@ -17,6 +17,19 @@
 #include "sha512.h"
 #include "crypto.h"
 
+/**
+ * is_fips_ready - Check FIPS POST status.
+ * Returns: 0 on success, -1 on failure.
+ */
+int is_fips_ready(char *crypto_name, const size_t name_len)
+{
+	/* Not supported */
+	wpa_printf(MSG_ERROR, "POST validation not implemented for gnutls");
+	if (crypto_name)
+		snprintf(crypto_name, name_len, "gnutls");
+	return -1;
+}
+
 static int gnutls_digest_vector(int algo, size_t num_elem,
 				const u8 *addr[], const size_t *len, u8 *mac)
 {

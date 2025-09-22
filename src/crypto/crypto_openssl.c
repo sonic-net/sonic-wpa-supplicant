@@ -90,6 +90,32 @@ static EC_KEY * EVP_PKEY_get0_EC_KEY(EVP_PKEY *pkey)
 
 #endif /* OpenSSL version < 1.1.0 */
 
+/**
+ * is_fips_ready - Check FIPS POST status.
+ * Returns: 0 on success, -1 on failure.
+ */
+int is_fips_ready(char *crypto_name, const size_t name_len)
+{
+	int status=-1;
+
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+	/** Check if the OpenSSL self-tests have passed, by fetching an algorithm with
+	 *  fips=yes. This will fail if either no FIPS provider is available or
+	 *  self-tests on provider load didn't pass.
+	 */
+	EVP_CIPHER *cipher = EVP_CIPHER_fetch(NULL, "AES-256-CBC", "fips=yes");
+	if (cipher) {
+		status = 0;
+		EVP_CIPHER_free(cipher);
+	}
+#else /* OpenSSL version >= 3.0 */
+	wpa_printf(MSG_ERROR, "OpenSSL version < 3.0 not supported");
+#endif /* OpenSSL version >= 3.0 */
+	if (crypto_name)
+		snprintf(crypto_name, name_len, "openssl");
+	return status;
+}
+
 static BIGNUM * get_group5_prime(void)
 {
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L && \

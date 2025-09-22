@@ -22,6 +22,12 @@
 #define CRYPTO_H
 
 /**
+ * is_fips_ready - Check FIPS POST status.
+ * Returns: 0 on success, -1 on failure.
+ */
+int is_fips_ready(char *crypto_name, const size_t name_len);
+
+/**
  * md4_vector - MD4 hash for data vector
  * @num_elem: Number of elements in the data vector
  * @addr: Pointers to the data areas

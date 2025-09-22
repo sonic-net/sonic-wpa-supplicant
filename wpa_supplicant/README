@@ -422,6 +422,7 @@ options:
   -d = increase debugging verbosity (-dd even more)
   -D = driver name (can be multiple drivers: nl80211,wext)
   -f = Log output to default log location (normally /tmp)
+  -F = show FIPS POST status
   -g = global ctrl_interface
   -G = global ctrl_interface group
   -K = include keys (passwords, etc.) in debug output
@@ -499,6 +500,17 @@ main interface:
 
 wpa_supplicant -cw.conf -Dnl80211 -iwlan0 -bbr0
 
+
+FIPS POST(Pre-Operational Self-Tests) Validation Support (SONiC Extension)
+--------------------------------------------------------------------------
+
+The POST status verification is crucial to ensure that the cryptographic
+backend is properly configured and has passed the Self-Tests, when operating
+in FIPS mode.
+
+wpa_supplicant -F
+
+Output: FIPS POST status: pass/fail(crypto backend: <name>)
 
 Configuration file
 ------------------
