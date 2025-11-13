@@ -1,0 +1,19 @@
+Package: libwpa-client-dev
+Source: wpa
+Version: 2:2.9.0-14
+Architecture: amd64
+Maintainer: Debian wpasupplicant Maintainers <wpa@packages.debian.org>
+Installed-Size: 116
+Breaks: libwpa-dev
+Replaces: libwpa-dev
+Section: net
+Priority: optional
+Multi-Arch: same
+Homepage: https://w1.fi/wpa_supplicant/
+Description: development files for WPA/WPA2 client support (IEEE 802.11i)
+ WPA and WPA2 are methods for securing wireless networks, the former
+ using IEEE 802.1X, and the latter using IEEE 802.11i. This software
+ provides key negotiation with the WPA Authenticator, and controls
+ association with IEEE 802.11i networks.
+ .
+ This package contains static libwpa_client library and header files.

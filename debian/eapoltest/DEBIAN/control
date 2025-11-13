@@ -1,0 +1,15 @@
+Package: eapoltest
+Source: wpa
+Version: 2:2.9.0-14
+Architecture: amd64
+Maintainer: Debian wpasupplicant Maintainers <wpa@packages.debian.org>
+Installed-Size: 2333
+Depends: libc6 (>= 2.34), libdbus-1-3 (>= 1.9.14), libpcsclite1 (>= 1.0.0), libssl3 (>= 3.0.0)
+Section: net
+Priority: optional
+Homepage: https://w1.fi/wpa_supplicant/
+Description: EAPoL testing utility
+ eapol_test allows testing EAP authentication methods without using
+ a full 802.1X connection. It is frequently used to test the EAP
+ configuration of RADIUS systems. It is an administrator tool and not
+ required for standard 802.1X authentication.

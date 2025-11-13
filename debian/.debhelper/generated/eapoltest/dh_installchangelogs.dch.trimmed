@@ -1,0 +1,157 @@
+wpa (2:2.9.0-14) unstable; urgency=medium
+
+  [ Paul Menzel ]
+  * Fix unknown key warnings NetworkManager configuration drop-in.
+  * Update NetworkManager configuration drop-in.
+  * Remove defaults from NetworkManager configuration drop-in.
+    Closes: #951268, #966811.
+
+  [ Andrej Shadura ]
+  * Add fixes proposed upstream:
+    - Fix error message for radius_accept_attr config option
+    - Update WPS credentials on SIGHUP
+
+ -- Andrej Shadura <andrewsh@debian.org>  Mon, 24 Aug 2020 12:53:37 +0200
+
+wpa (2:2.9.0-13) unstable; urgency=medium
+
+  * Apply upstream patches:
+    - Avoid sending invalid mgmt frames at startup
+    - Increase introspection buffer size for D-Bus
+
+ -- Andrej Shadura <andrewsh@debian.org>  Tue, 19 May 2020 14:29:29 +0200
+
+wpa (2:2.9.0-12) unstable; urgency=medium
+
+  * Add an upstream patch to fix the MAC randomisation issue with some cards
+    (LP: #1867908).
+
+ -- Andrej Shadura <andrewsh@debian.org>  Tue, 24 Mar 2020 11:13:16 +0100
+
+wpa (2:2.9.0-11) unstable; urgency=medium
+
+  * Actually add autopkgtest for libwpa-client-dev and libwpa_test.c.
+
+ -- Andrej Shadura <andrewsh@debian.org>  Sat, 07 Mar 2020 13:18:19 +0100
+
+wpa (2:2.9.0-10) unstable; urgency=medium
+
+  * Rename the package with the client library to libwpa-client-dev.
+
+ -- Andrej Shadura <andrewsh@debian.org>  Tue, 25 Feb 2020 20:19:52 +0100
+
+wpa (2:2.9.0-9) unstable; urgency=medium
+
+  [ Terry Burton ]
+  * Build and install eapol_test in eapoltest package (Closes: #700870)
+
+  [ Didier Raboud ]
+  * Backport upstream patch to fix build with Debian's VERSION_STR.
+
+  [ Andrew Lee (李健秋) ]
+  * Build libwpa-dev binary package which contains a static
+    libwpa_client library and the wpa_ctrl header with an example program.
+
+  [ Andrej Shadura ]
+  * Add a patch to provide the BIT() macro locally in wpa_ctrl.h.
+  * Patch the example to use stddef.h and wpa_ctrl.h from the global location.
+  * Add an autopkgtest for libwpa-dev and libwpa_test.c.
+
+ -- Andrej Shadura <andrewsh@debian.org>  Tue, 25 Feb 2020 18:21:35 +0100
+
+wpa (2:2.9.0-8) unstable; urgency=medium
+
+  * Reupload as 2.9.0 to undo an accidental experimental upload to unstable.
+
+ -- Andrej Shadura <andrewsh@debian.org>  Sat, 22 Feb 2020 11:25:29 +0300
+
+wpa (2:2.9-7) unstable; urgency=medium
+
+  * Apply upstream patches:
+    - trace: handle binutils bfd.h breakage
+    - Check for FT support when selecting FT suites (Closes: #942164)
+
+ -- Andrej Shadura <andrewsh@debian.org>  Sat, 15 Feb 2020 16:42:04 +0100
+
+wpa (2:2.9-6) unstable; urgency=medium
+
+  [ Debian Janitor ]
+  * Use secure URI in Homepage field.
+  * Move source package lintian overrides to debian/source.
+  * Use canonical URL in Vcs-Browser.
+  * Rely on pre-initialized dpkg-architecture variables.
+  * Update standards version to 4.4.1, no changes needed.
+
+  [ Andrej Shadura ]
+  * Disable CONFIG_DRIVER_MACSEC_QCA on kfreebsd.
+
+ -- Andrej Shadura <andrewsh@debian.org>  Mon, 13 Jan 2020 16:28:58 +0100
+
+wpa (2:2.9-5) unstable; urgency=medium
+
+  * Fix erroneously inverted logic in postinst.
+
+ -- Andrej Shadura <andrewsh@debian.org>  Mon, 13 Jan 2020 10:48:26 +0100
+
+wpa (2:2.9-4) unstable; urgency=medium
+
+  [ Helmut Grohne ]
+  * Fix FTCBFS: Don’t export CC=cc (Closes: #921998).
+
+  [ Andrej Shadura ]
+  * Don’t act in hostapd.postinst if we’re running in a chrootless root.
+  * Apply an upstream patch:
+    - wpa_supplicant: Do not try to detect PSK mismatch during PTK rekeying.
+
+ -- Andrej Shadura <andrewsh@debian.org>  Mon, 13 Jan 2020 10:37:10 +0100
+
+wpa (2:2.9-3) unstable; urgency=medium
+
+  * Add pkg.wpa.nogui and noudeb build profiles.
+
+ -- Andrej Shadura <andrewsh@debian.org>  Fri, 04 Oct 2019 11:47:15 +0200
+
+wpa (2:2.9-2) unstable; urgency=medium
+
+  * SECURITY UPDATE:
+    - AP mode PMF disconnection protection bypass.
+      More details:
+       + https://w1.fi/security/2019-7/
+      Closes: #940080 (CVE-2019-16275)
+
+ -- Andrej Shadura <andrewsh@debian.org>  Fri, 04 Oct 2019 10:11:47 +0200
+
+wpa (2:2.9-1) unstable; urgency=high
+
+  * New upstream release (Closes: #934180):
+    - SECURITY UPDATE (CVE-2019-13377):
+      Timing-based side-channel attack against WPA3's Dragonfly handshake
+      when using Brainpool curves.
+      More details:
+      + https://w1.fi/security/2019-6/
+      + https://wpa3.mathyvanhoef.com/
+  * Drop a patch applied upstream.
+  * Update debian/watch.
+
+ -- Andrej Shadura <andrewsh@debian.org>  Thu, 08 Aug 2019 15:59:02 +0200
+
+wpa (2:2.8+git20190713+b8491ae-1) experimental; urgency=medium
+
+  * Upload to experimental.
+  * New upstream snapshot.
+  * Drop patches applied upstream.
+
+ -- Andrej Shadura <andrewsh@debian.org>  Tue, 16 Jul 2019 18:47:25 -0300
+
+wpa (2:2.8-3) unstable; urgency=medium
+
+  * Upload to unstable.
+  * Apply upstream patch:
+    - Use a separate flag for 4-way handshake offload.
+  * Spelling: meny -> menu.
+  * Add lintian overrides for known issues.
+
+ -- Andrej Shadura <andrewsh@debian.org>  Thu, 11 Jul 2019 23:19:03 +0200
+
+# Older entries have been removed from this changelog.
+# To read the complete changelog use `apt changelog eapoltest`.

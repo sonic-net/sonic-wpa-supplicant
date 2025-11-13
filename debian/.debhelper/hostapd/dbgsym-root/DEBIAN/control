@@ -1,0 +1,12 @@
+Package: hostapd-dbgsym
+Source: wpa
+Version: 2:2.9.0-14
+Auto-Built-Package: debug-symbols
+Architecture: amd64
+Maintainer: Debian wpasupplicant Maintainers <wpa@packages.debian.org>
+Installed-Size: 2796
+Depends: hostapd (= 2:2.9.0-14)
+Section: debug
+Priority: optional
+Description: debug symbols for hostapd
+Build-Ids: b1313216109e9565d28f410e981c73192f891197 f960b798d260921c41bf0a4f674741e9c8765cbd

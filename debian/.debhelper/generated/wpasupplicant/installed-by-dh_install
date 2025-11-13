@@ -1,0 +1,14 @@
+./debian/ifupdown/wpa_action
+./debian/ifupdown/action_wpa.sh
+./debian/ifupdown/functions.sh
+./debian/ifupdown/wpasupplicant/ifupdown.sh
+./wpa_supplicant/dbus/fi.w1.wpa_supplicant1.service
+./wpa_supplicant/examples/60_wpa_supplicant
+./wpa_supplicant/systemd/wpa_supplicant-nl80211@.service
+./wpa_supplicant/systemd/wpa_supplicant-wired@.service
+./wpa_supplicant/systemd/wpa_supplicant.service
+./wpa_supplicant/systemd/wpa_supplicant@.service
+./wpa_supplicant/wpa_cli
+./wpa_supplicant/wpa_passphrase
+./wpa_supplicant/wpa_supplicant
+./debian/NetworkManager/no-mac-addr-change.conf

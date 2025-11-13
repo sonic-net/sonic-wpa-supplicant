@@ -1,0 +1,12 @@
+Package: wpagui-dbgsym
+Source: wpa
+Version: 2:2.9.0-14
+Auto-Built-Package: debug-symbols
+Architecture: amd64
+Maintainer: Debian wpasupplicant Maintainers <wpa@packages.debian.org>
+Installed-Size: 2226
+Depends: wpagui (= 2:2.9.0-14)
+Section: debug
+Priority: optional
+Description: debug symbols for wpagui
+Build-Ids: e7c413252e582ae8250f7fbcc0f5e7c34988acf0

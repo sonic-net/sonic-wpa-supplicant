@@ -1,0 +1,2 @@
+./wpa_supplicant/libwpa_client.a
+./src/common/wpa_ctrl.h

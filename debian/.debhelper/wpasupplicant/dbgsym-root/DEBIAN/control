@@ -1,0 +1,12 @@
+Package: wpasupplicant-dbgsym
+Source: wpa
+Version: 2:2.9.0-14
+Auto-Built-Package: debug-symbols
+Architecture: amd64
+Maintainer: Debian wpasupplicant Maintainers <wpa@packages.debian.org>
+Installed-Size: 4094
+Depends: wpasupplicant (= 2:2.9.0-14)
+Section: debug
+Priority: optional
+Description: debug symbols for wpasupplicant
+Build-Ids: 7baa7ae12e27c8b5e7c98c8280d122efb2ed7447 f330a7f0452c79130eca30bd86f37fdb70bfbdd1 f7307acf91a1baeda5631560b7fdc390725234cb

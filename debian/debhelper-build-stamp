@@ -1,0 +1,6 @@
+hostapd
+wpagui
+wpasupplicant
+wpasupplicant-udeb
+eapoltest
+libwpa-client-dev

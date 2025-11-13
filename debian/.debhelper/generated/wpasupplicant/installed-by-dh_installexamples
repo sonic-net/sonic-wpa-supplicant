@@ -1,0 +1,9 @@
+./wpa_supplicant/wpa_supplicant.conf
+./wpa_supplicant/examples/ieee8021x.conf
+./wpa_supplicant/examples/openCryptoki.conf
+./wpa_supplicant/examples/plaintext.conf
+./wpa_supplicant/examples/udhcpd-p2p.conf
+./wpa_supplicant/examples/wep.conf
+./wpa_supplicant/examples/wpa-psk-tkip.conf
+./wpa_supplicant/examples/wpa2-eap-ccmp.conf
+./debian/examples/wpa-roam.conf

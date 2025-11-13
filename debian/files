@@ -1,0 +1,11 @@
+eapoltest-dbgsym_2.9.0-14_amd64.deb debug optional automatic=yes
+eapoltest_2.9.0-14_amd64.deb net optional
+hostapd-dbgsym_2.9.0-14_amd64.deb debug optional automatic=yes
+hostapd_2.9.0-14_amd64.deb net optional
+libwpa-client-dev_2.9.0-14_amd64.deb net optional
+wpa_2.9.0-14_amd64.buildinfo net optional
+wpagui-dbgsym_2.9.0-14_amd64.deb debug optional automatic=yes
+wpagui_2.9.0-14_amd64.deb net optional
+wpasupplicant-dbgsym_2.9.0-14_amd64.deb debug optional automatic=yes
+wpasupplicant-udeb_2.9.0-14_amd64.udeb debian-installer standard
+wpasupplicant_2.9.0-14_amd64.deb net optional
