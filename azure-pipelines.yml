@@ -91,7 +91,7 @@ jobs:
   pool: sonicso1ES-arm64
 
   container:
-    image: sonicdev-microsoft.azurecr.io:443/sonic-slave-bookworm:${BUILD_BRANCH}-arm64
+    image: sonicdev-microsoft.azurecr.io:443/sonic-slave-bookworm:$(BUILD_BRANCH)-arm64
 
   steps:
   - script: |
