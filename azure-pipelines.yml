@@ -161,7 +161,7 @@ jobs:
   pool: sonicso1ES-armhf
 
   container:
-    image: sonicdev-microsoft.azurecr.io:443/sonic-slave-bookworm:${BUILD_BRANCH}-armhf
+    image: sonicdev-microsoft.azurecr.io:443/sonic-slave-bookworm:$(BUILD_BRANCH)-armhf
 
   steps:
   - script: |
