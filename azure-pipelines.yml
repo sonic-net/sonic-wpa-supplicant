@@ -8,6 +8,13 @@ trigger:
     include:
       - "*"
 
+variables:
+  - name: BUILD_BRANCH
+    ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
+      value: $(System.PullRequest.TargetBranch)
+    ${{ else }}:
+      value: $(Build.SourceBranchName)
+
 jobs:
 - job:
   displayName: "amd64"
@@ -15,7 +22,7 @@ jobs:
     vmImage: 'ubuntu-22.04'
 
   container:
-    image: sonicdev-microsoft.azurecr.io:443/sonic-slave-bookworm:latest
+    image: sonicdev-microsoft.azurecr.io:443/sonic-slave-bookworm:$(BUILD_BRANCH)
 
   steps:
   - script: |
@@ -84,7 +91,7 @@ jobs:
   pool: sonicso1ES-arm64
 
   container:
-    image: sonicdev-microsoft.azurecr.io:443/sonic-slave-bookworm-arm64:latest
+    image: sonicdev-microsoft.azurecr.io:443/sonic-slave-bookworm:${BUILD_BRANCH}-arm64
 
   steps:
   - script: |
@@ -154,7 +161,7 @@ jobs:
   pool: sonicso1ES-armhf
 
   container:
-    image: sonicdev-microsoft.azurecr.io:443/sonic-slave-bookworm-armhf:latest
+    image: sonicdev-microsoft.azurecr.io:443/sonic-slave-bookworm:${BUILD_BRANCH}-armhf
 
   steps:
   - script: |
