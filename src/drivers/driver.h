@@ -2330,6 +2330,7 @@ struct macsec_init_params {
 	bool always_include_sci;
 	bool use_es;
 	bool use_scb;
+	u64 cs_id; /* MACsec cipher suite ID (see ieee802_1x_defs.h CS_ID_*). */
 };
 #endif /* CONFIG_MACSEC */
 

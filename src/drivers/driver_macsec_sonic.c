@@ -15,6 +15,7 @@
 
 #include "utils/common.h"
 #include "driver.h"
+#include "common/ieee802_1x_defs.h"
 #include "driver_wired_common.h"
 #include "sonic_operators.h"
 
@@ -95,6 +96,26 @@ static char * create_binary_hex(const void * binary, unsigned long long length)
     return buffer;
 }
 
+static const char * macsec_sonic_cipher_suite_name(u64 cs_id)
+{
+	switch (cs_id) {
+	case CS_ID_GCM_AES_128:
+		return CS_NAME_GCM_AES_128;
+	case CS_ID_GCM_AES_256:
+		return CS_NAME_GCM_AES_256;
+	case CS_ID_GCM_AES_XPN_128:
+		return CS_NAME_GCM_AES_XPN_128;
+	case CS_ID_GCM_AES_XPN_256:
+		return CS_NAME_GCM_AES_XPN_256;
+	default:
+		wpa_printf(MSG_ERROR,
+			   DRV_PREFIX ": Unknown MACsec cipher suite ID 0x%016" PRIx64
+			   ", defaulting to %s",
+			   (u64) cs_id, CS_NAME_GCM_AES_128);
+		return CS_NAME_GCM_AES_128;
+	}
+}
+
 static char *create_auth_key(const unsigned char *key, unsigned long long key_length)
 {
     unsigned char buffer[16] = {0};
@@ -152,10 +173,12 @@ static int macsec_sonic_macsec_init(void *priv, struct macsec_init_params *param
     struct macsec_sonic_data *drv = priv;
     ENTER_LOG;
 
+	const char *cipher_suite = macsec_sonic_cipher_suite_name(params->cs_id);
+
     const struct sonic_db_name_value_pair pairs[] = 
     {
         {"enable", "false"},
-        {"cipher_suite" , "GCM-AES-128"}, // Default cipher suite
+	    {"cipher_suite" , cipher_suite},
         {"send_sci", params->always_include_sci ? "true" : "false"},
     };
     int ret = sonic_db_set(
