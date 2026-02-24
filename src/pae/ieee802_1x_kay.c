@@ -3546,9 +3546,18 @@ static int ieee802_1x_kay_decode_mkpdu(struct ieee802_1x_kay *kay,
 					   "KaY: Discarding Rx MKPDU: Live Peer not sending SAK-USE");
 				return -1;
 			}
+
+			/* Update watchdog if we're in peer's live peer list with correct MN.
+			 * This handles the case where SAK-USE is temporarily missing during
+			 * session establishment. */
+			if (i_in_peerlist) {
+				wpa_printf(MSG_INFO, "KaY: Update watchdog timer, SAK-USE not set ");
+				peer->expire = time(NULL) + MKA_LIFE_TIME / 1000;
+			}
 		} else {
 			peer->missing_sak_use_count = 0;
 
+			wpa_printf(MSG_INFO, "KaY: Update watchdog timer, SAK-USE set");
 			/* Only update live peer watchdog after successful
 			 * decode of all parameter sets */
 			peer->expire = time(NULL) + MKA_LIFE_TIME / 1000;
