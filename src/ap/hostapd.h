@@ -679,4 +679,9 @@ void fst_hostapd_fill_iface_obj(struct hostapd_data *hapd,
 				struct fst_wpa_obj *iface_obj);
 #endif /* CONFIG_FST */
 
+#ifdef CONFIG_SONIC_HOSTAPD
+void hostapd_deinit_driver(const struct wpa_driver_ops *driver,
+			    void *drv_priv,
+			    struct hostapd_iface *hapd_iface);
+#endif /* CONFIG_SONIC_HOSTAPD */
 #endif /* HOSTAPD_H */
