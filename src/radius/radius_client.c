@@ -1506,7 +1506,7 @@ static int radius_client_disable_pmtu_discovery(int s)
 	return r;
 }
 
-#ifdef CONFIG_SONIC_RADIUS
+#if defined(CONFIG_SONIC_RADIUS) || defined(CONFIG_SONIC_HOSTAPD)
 void radius_close_auth_sockets(struct radius_client_data *radius)
 #else
 static void radius_close_auth_sockets(struct radius_client_data *radius)
@@ -1528,7 +1528,7 @@ static void radius_close_auth_sockets(struct radius_client_data *radius)
 #endif /* CONFIG_IPV6 */
 }
 
-#ifdef CONFIG_SONIC_RADIUS
+#if defined(CONFIG_SONIC_RADIUS) || defined(CONFIG_SONIC_HOSTAPD)
 void radius_close_acct_sockets(struct radius_client_data *radius)
 #else
 static void radius_close_acct_sockets(struct radius_client_data *radius)
