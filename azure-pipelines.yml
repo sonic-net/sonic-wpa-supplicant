@@ -54,8 +54,8 @@ jobs:
       path: $(Build.ArtifactStagingDirectory)/download
       artifact: common-lib
       patterns: |
-        target/debs/bookworm/libyang-*_1.0*.deb
-        target/debs/bookworm/libyang_1.0*.deb
+        target/debs/bookworm/libyang-dev_3*.deb
+        target/debs/bookworm/libyang3_*.deb
     displayName: "Download libyang from amd64 common lib"
   - script: |
       set -ex
@@ -123,8 +123,8 @@ jobs:
       path: $(Build.ArtifactStagingDirectory)/download
       artifact: common-lib.arm64
       patterns: |
-        target/debs/bookworm/libyang-*_1.0*.deb
-        target/debs/bookworm/libyang_1.0*.deb
+        target/debs/bookworm/libyang-dev_3*.deb
+        target/debs/bookworm/libyang3_*.deb
     displayName: "Download libyang from arm64 common lib"
   - script: |
       set -ex
@@ -193,8 +193,8 @@ jobs:
       path: $(Build.ArtifactStagingDirectory)/download
       artifact: common-lib.armhf
       patterns: |
-        target/debs/bookworm/libyang-*_1.0*.deb
-        target/debs/bookworm/libyang_1.0*.deb
+        target/debs/bookworm/libyang-dev_3*.deb
+        target/debs/bookworm/libyang3_*.deb
     displayName: "Download libyang from armhf common lib"
   - script: |
       set -ex
