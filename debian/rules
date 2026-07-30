@@ -1,9 +1,15 @@
 #!/usr/bin/make -f
 
 export QT_SELECT=qt5
-# Upgrade FORTIFY_SOURCE to level 3 (dpkg default is =2).
 export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+# Upgrade FORTIFY_SOURCE to level 3 (dpkg default is =2).
+# FORTIFY_SOURCE requires -O1 or higher; skip the override for noopt builds.
+ifeq (,$(filter noopt,$(DEB_BUILD_OPTIONS)))
 export DEB_CPPFLAGS_MAINT_APPEND = -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3
+FORTIFY3_FLAGS := -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3
+else
+FORTIFY3_FLAGS :=
+endif
 DPKG_EXPORT_BUILDFLAGS = 1
 include /usr/share/dpkg/default.mk
 
@@ -13,15 +19,15 @@ include /usr/share/dpkg/default.mk
 # to resolve the compile errors with bookworm. There are deprecated APIs with
 # openssl 3.0 which are used by wpa supplicant. We can remove those flags when
 # there are solutions ready.
-DEB_CFLAGS_MAINT_APPEND   = -MMD -Wall $(shell dpkg-buildflags --get CPPFLAGS) -Wno-error=array-bounds $(warning WARNING: Building with -Wno-error=array-bounds) \
+DEB_CFLAGS_MAINT_APPEND   = -MMD -Wall $(shell dpkg-buildflags --get CPPFLAGS) $(FORTIFY3_FLAGS) -Wno-error=array-bounds $(warning WARNING: Building with -Wno-error=array-bounds) \
                                       -Wno-deprecated-declarations $(warning WARNING: Building with -Wno-deprecated-declarations) \
                                       -Wno-use-after-free $(warning WARNING: Building with -Wno-use-after-free)       \
                                       -Wno-discarded-qualifiers $(warning WARNING: Building with -Wno-discarded-qualifiers)
-DEB_CXXFLAGS_MAINT_APPEND = $(shell dpkg-buildflags --get CPPFLAGS)
+DEB_CXXFLAGS_MAINT_APPEND = $(shell dpkg-buildflags --get CPPFLAGS) $(FORTIFY3_FLAGS)
 DEB_LDFLAGS_MAINT_APPEND  = -Wl,--as-needed
 export DEB_CFLAGS_MAINT_APPEND DEB_CXXFLAGS_MAINT_APPEND DEB_LDFLAGS_MAINT_APPEND
 
-UCFLAGS   = -MMD -Wall -fPIC $(shell dpkg-buildflags --get CPPFLAGS) $(shell dpkg-buildflags --get CFLAGS)
+UCFLAGS   = -MMD -Wall -fPIC $(shell dpkg-buildflags --get CPPFLAGS) $(shell dpkg-buildflags --get CFLAGS) $(FORTIFY3_FLAGS)
 
 BINDIR    = /sbin
 V = 1
