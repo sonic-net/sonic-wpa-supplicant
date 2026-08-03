@@ -407,10 +407,27 @@ void * ieee802_1x_create_preshared_mka(struct wpa_supplicant *wpa_s,
 {
 	struct mka_key *cak;
 	struct mka_key_name *ckn;
+	enum macsec_policy policy;
 	void *res = NULL;
 
 	if ((ssid->mka_psk_set & MKA_PSK_SET) != MKA_PSK_SET)
 		goto end;
+
+	/*
+	 * Determine the desired MACsec policy in the same way as in
+	 * ieee802_1x_alloc_kay_sm(). This allows us to decide whether an
+	 * existing KaY instance can be reused instead of always tearing it
+	 * down and allocating a new one, which would trigger an extra
+	 * macsec_deinit/macsec_init cycle on the port.
+	 */
+	if (ssid->macsec_policy == 1) {
+		if (ssid->macsec_integ_only == 1)
+			policy = SHOULD_SECURE;
+		else
+			policy = SHOULD_ENCRYPT;
+	} else {
+		policy = DO_NOT_SECURE;
+	}
 
 	ckn = os_zalloc(sizeof(*ckn));
 	if (!ckn)
@@ -420,8 +437,16 @@ void * ieee802_1x_create_preshared_mka(struct wpa_supplicant *wpa_s,
 	if (!cak)
 		goto free_ckn;
 
-	if (ieee802_1x_alloc_kay_sm(wpa_s, ssid) < 0 || !wpa_s->kay)
-		goto free_cak;
+	/*
+	 * Only (re)allocate the KaY state machine if there is no existing
+	 * instance or if the policy has changed. Reusing an existing KaY
+	 * with the same policy avoids a redundant macsec_deinit/macsec_init
+	 * sequence on the underlying port when PSK MKA is started.
+	 */
+	if (!wpa_s->kay || wpa_s->kay->policy != policy) {
+		if (ieee802_1x_alloc_kay_sm(wpa_s, ssid) < 0 || !wpa_s->kay)
+			goto free_cak;
+	}
 
 	if (wpa_s->kay->policy == DO_NOT_SECURE)
 		goto dealloc;
