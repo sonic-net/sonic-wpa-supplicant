@@ -47,6 +47,7 @@ struct ieee802_1x_cp_sm {
 	u8 distributed_an;
 	bool using_receive_sas;
 	bool all_receiving;
+	bool step_pending; /* a deferred step_cb is already queued */
 	bool server_transmitting;
 	bool using_transmit_sa;
 
@@ -512,6 +513,7 @@ static void ieee802_1x_cp_step_run(struct ieee802_1x_cp_sm *sm)
 static void ieee802_1x_cp_step_cb(void *eloop_ctx, void *timeout_ctx)
 {
 	struct ieee802_1x_cp_sm *sm = eloop_ctx;
+	sm->step_pending = false;
 	ieee802_1x_cp_step_run(sm);
 }
 
@@ -703,10 +705,22 @@ void ieee802_1x_cp_sm_step(void *cp_ctx)
 	 * Run ieee802_1x_cp_step_run from a registered timeout
 	 * to make sure that other possible timeouts/events are processed
 	 * and to avoid long function call chains.
+	 *
+	 * Coalesce onto an already-queued step instead of cancelling and
+	 * re-registering it: step_run() loops until CP_state is stable, so one
+	 * pending callback covers every change accumulated until it runs.
+	 * Re-arming on each call let a burst of sm_step() invocations
+	 * perpetually push the 0 s timeout back, starving an already-latched
+	 * all_receiving until the ~6 s transmit_when failsafe.
 	 */
 	struct ieee802_1x_cp_sm *sm = cp_ctx;
-	eloop_cancel_timeout(ieee802_1x_cp_step_cb, sm, NULL);
-	eloop_register_timeout(0, 0, ieee802_1x_cp_step_cb, sm, NULL);
+
+	if (sm->step_pending)
+		return;
+	/* Latch only after the timeout is queued, so a failed registration
+	 * lets the next sm_step() retry rather than wedging the SM. */
+	if (eloop_register_timeout(0, 0, ieee802_1x_cp_step_cb, sm, NULL) == 0)
+		sm->step_pending = true;
 }
 
 
