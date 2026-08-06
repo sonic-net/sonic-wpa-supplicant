@@ -1471,10 +1471,17 @@ ieee802_1x_mka_decode_sak_use_body(
 	peer = ieee802_1x_kay_get_live_peer(participant,
 					    participant->current_peer_id.mi);
 	if (!peer) {
-		wpa_printf(MSG_WARNING,
-			   "KaY: The peer (%s) is not my live peer - ignore MACsec SAK Use parameter set",
+		/* A peer can list us as live before we have promoted it to
+		 * live on our side. That is a transient during MKA liveness
+		 * establishment, not an invalid peer, so ignore the parameter
+		 * set and let the peer reach LIVE on a later hello. Returning
+		 * an error would discard the whole MKPDU, and a SAK Use with
+		 * no Distributed SAK triggers a local MI reset, so both ends
+		 * can ping-pong MI resets and never converge. */
+		wpa_printf(MSG_DEBUG,
+			   "KaY: The peer (%s) is not yet my live peer - ignore MACsec SAK Use parameter set",
 			   mi_txt(participant->current_peer_id.mi));
-		return -1;
+		return 0;
 	}
 
 	hdr = (struct ieee802_1x_mka_hdr *) mka_msg;
