@@ -2,7 +2,8 @@ ALL=test-base64 test-md4 test-milenage \
 	test-rsa-sig-ver \
 	test-sha1 \
 	test-https test-https_server \
-	test-sha256 test-aes test-x509v3 test-list test-rc4
+	test-sha256 test-aes test-x509v3 test-list test-rc4 \
+	test-macsec_cp_wedge
 
 include ../src/build.rules
 
@@ -44,6 +45,11 @@ LLIBS = -Wl,--start-group $(DLIBS) -Wl,--end-group $(SLIBS)
 
 # glibc < 2.17 needs -lrt for clock_gettime()
 LLIBS += -lrt
+
+# Self-contained MACsec CP regression test: #includes the CP module with
+# stubbed deps, needs no extra libraries.
+test-macsec_cp_wedge: test-macsec_cp_wedge.c
+	$(CC) $(CFLAGS) -o $@ $<
 
 test-aes: $(call BUILDOBJ,test-aes.o) $(LIBS)
 	$(LDO) $(LDFLAGS) -o $@ $^ $(LLIBS)
@@ -90,6 +96,7 @@ run-tests: $(ALL)
 	./test-rsa-sig-ver
 	./test-sha1
 	./test-sha256
+	./test-macsec_cp_wedge
 	@echo
 	@echo All tests completed successfully.
 
