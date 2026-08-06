@@ -850,6 +850,7 @@ ieee802_1x_kay_create_peer(const u8 *mi, u32 mn)
 	peer->mn = mn;
 	peer->expire = time(NULL) + MKA_LIFE_TIME / 1000;
 	peer->sak_used = false;
+	peer->sak_txed = false;
 	peer->missing_sak_use_count = 0;
 
 	return peer;
@@ -1787,24 +1788,37 @@ ieee802_1x_mka_decode_sak_use_body(
 	if (participant->is_key_server) {
 		struct ieee802_1x_kay_peer *peer_iter;
 		bool all_receiving = true;
+		bool all_transmitting = true;
 
 		/* Distributed keys are equal from above comparison. */
 		peer->sak_used = true;
-
+		/* The peer is transmitting on our latest key once it advertises
+		 * latest-key tx (body->ltx) for a latest key that matches ours
+		 * (body->lrx, matched above). */
+		peer->sak_txed = body->lrx && body->ltx;
+		/* No early break: both gates need to be computed across the
+		 * whole live set, not just up to the first laggard peer. */
 		dl_list_for_each(peer_iter, &participant->live_peers,
 				 struct ieee802_1x_kay_peer, list) {
-			if (!peer_iter->sak_used) {
+			if (!peer_iter->sak_used)
 				all_receiving = false;
-				break;
-			}
+			if (!peer_iter->sak_txed)
+				all_transmitting = false;
 		}
 
-		if (all_receiving) {
+		if (all_receiving)
 			participant->to_dist_sak = false;
-			if (is_principal) {
+
+		if (is_principal) {
+			if (all_receiving)
 				ieee802_1x_cp_set_allreceiving(kay->cp, true);
+			/* Retire gate: release the old SA as soon as every live
+			 * peer confirms it advanced its transmit to the latest
+			 * SAK, instead of waiting on the failsafe timer. */
+			ieee802_1x_cp_set_all_transmitting(kay->cp,
+							   all_transmitting);
+			if (all_receiving || all_transmitting)
 				ieee802_1x_cp_sm_step(kay->cp);
-			}
 		}
 	} else if (is_principal && peer->is_key_server && body->ltx) {
 		ieee802_1x_cp_set_servertransmitting(kay->cp, true);
@@ -2603,6 +2617,7 @@ ieee802_1x_kay_generate_new_sak(struct ieee802_1x_mka_participant *participant)
 	dl_list_for_each(peer, &participant->live_peers,
 			 struct ieee802_1x_kay_peer, list) {
 		peer->sak_used = false;
+		peer->sak_txed = false;
 	}
 
 	kay->dist_kn++;
