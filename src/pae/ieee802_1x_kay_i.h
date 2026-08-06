@@ -101,6 +101,11 @@ struct ieee802_1x_mka_participant {
 
 	enum activate_ctrl { DEFAULT, DISABLED, ON_OPER_UP, ALWAYS } activate;
 
+	/* The privileged CA on this port: it owns the controlled port whenever
+	 * it is eligible, and reclaims ownership as soon as it is live again
+	 * (revertive). At most one participant may set this. Every other CA is
+	 * best effort and only carries the port while the primary cannot. */
+	bool is_primary;
 	struct dl_list live_peers;
 	struct dl_list potential_peers;
 
