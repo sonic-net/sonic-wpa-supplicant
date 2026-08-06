@@ -380,7 +380,6 @@ static void ieee802_1x_kay_deferred_rekey(void *eloop_ctx, void *timeout_ctx);
 static void ieee802_1x_kay_arm_deferred_rekey(struct ieee802_1x_kay *kay);
 
 
-
 /**
  * ieee802_1x_kay_set_principal_participant - Set the CP-owning participant
  *
@@ -1474,44 +1473,46 @@ ieee802_1x_mka_get_sak_use_length(
 
 
 /**
+ * ieee802_1x_kay_sample_transmit_lpn - Snapshot the LPN to advertise
+ *
+ * Per IEEE Std 802.1X-2010, Clause 9, a SecY reports the lowest PN it used for
+ * transmission "within the last two seconds". That delay comes from reporting
+ * the next PN that was read one hello interval ago, so the sampling must happen
+ * exactly once per interval, and only yields two seconds if mka_hello_time
+ * is 2s.
+ *
+ * The transmit SC is shared, so the principal samples on behalf of every
+ * participant rather than each re-reading the SA and advertising a PN that is
+ * only moments old.
+ */
+static void ieee802_1x_kay_sample_transmit_lpn(struct ieee802_1x_kay *kay)
+{
+	struct transmit_sa *txsa;
+
+	dl_list_for_each(txsa, &kay->txsc->sa_list, struct transmit_sa, list) {
+		/* The lowest acceptable PN is the last transmitted PN, which is
+		 * one less than the next transmit PN read an interval ago. */
+		txsa->advertised_lpn = txsa->next_pn > 1 ?
+			txsa->next_pn - 1 : 1;
+		secy_get_transmit_next_pn(kay, txsa);
+	}
+}
+
+
+/**
  * ieee802_1x_mka_get_lpn
  */
 static u64 ieee802_1x_mka_get_lpn(struct ieee802_1x_kay *kay,
 				  const struct ieee802_1x_mka_ki *ki)
 {
 	struct transmit_sa *txsa;
-	u64 lpn = 0;
 
-	dl_list_for_each(txsa, &kay->txsc->sa_list,
-			 struct transmit_sa, list) {
-		if (is_ki_equal(&txsa->pkey->key_identifier, ki)) {
-			/* Per IEEE Std 802.1X-2010, Clause 9, "Each SecY uses
-			 * MKA to communicate the lowest PN used for
-			 * transmission with the SAK within the last two
-			 * seconds".  Achieve this 2 second delay by setting the
-			 * lpn using the transmit next PN (i.e., txsa->next_pn)
-			 * that was read last time here (i.e., mka_hello_time
-			 * 2 seconds ago).
-			 *
-			 * The lowest acceptable PN is the same as the last
-			 * transmitted PN, which is one less than the next
-			 * transmit PN.
-			 *
-			 * NOTE: This method only works if mka_hello_time is 2s.
-			 */
-			lpn = (txsa->next_pn > 0) ? (txsa->next_pn - 1) : 0;
-
-			/* Now read the current transmit next PN for use next
-			 * time through. */
-			secy_get_transmit_next_pn(kay, txsa);
-			break;
-		}
+	dl_list_for_each(txsa, &kay->txsc->sa_list, struct transmit_sa, list) {
+		if (is_ki_equal(&txsa->pkey->key_identifier, ki))
+			return txsa->advertised_lpn ? txsa->advertised_lpn : 1;
 	}
 
-	if (lpn == 0)
-		lpn = 1;
-
-	return lpn;
+	return 1;
 }
 
 
@@ -1549,6 +1550,10 @@ ieee802_1x_mka_encode_sak_use_body(
 
 	/* data delay protect */
 	body->delay_protect = kay->mka_hello_time <= MKA_BOUNDED_HELLO_TIME;
+
+	/* Re-snapshot once per hello interval, on the principal MKPDU only. */
+	if (participant == owner)
+		ieee802_1x_kay_sample_transmit_lpn(kay);
 
 	/* lowest accept packet numbers */
 	olpn = ieee802_1x_mka_get_lpn(kay, &kay->oki);
@@ -3440,6 +3445,7 @@ ieee802_1x_kay_init_transmit_sa(struct transmit_sc *psc, u8 an, u32 next_PN,
 	ieee802_1x_kay_use_data_key(key);
 	psa->pkey = key;
 	psa->next_pn = next_PN;
+	psa->advertised_lpn = next_PN > 1 ? next_PN - 1 : 1;
 	psa->sc = psc;
 
 	os_get_time(&psa->created_time);
