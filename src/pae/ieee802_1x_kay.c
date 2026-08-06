@@ -376,6 +376,8 @@ static void
 ieee802_1x_kay_migrate_principal_sas(
 	struct ieee802_1x_mka_participant *old,
 	struct ieee802_1x_mka_participant *new_principal);
+static void ieee802_1x_kay_deferred_rekey(void *eloop_ctx, void *timeout_ctx);
+static void ieee802_1x_kay_arm_deferred_rekey(struct ieee802_1x_kay *kay);
 
 
 
@@ -404,6 +406,7 @@ ieee802_1x_kay_set_principal_participant(
 		kay->principal_participant->new_sak = false;
 
 	kay->principal_participant = participant;
+	kay->principal_changed = true;
 	if (participant) {
 		wpa_printf(MSG_DEBUG,
 			   "KaY: principal participant (CP owner) set to CKN %s",
@@ -2760,7 +2763,13 @@ ieee802_1x_kay_elect_key_server(struct ieee802_1x_mka_participant *participant)
 			ieee802_1x_cp_sm_step(kay->cp);
 		}
 
-		participant->new_sak = true;
+		/* A cold bring-up needs its first SAK now. Once a SAK is
+		 * installed, distributing a fresh one inline races the datapath
+		 * while both ends are still converging, so defer instead. */
+		if (participant->to_use_sak)
+			ieee802_1x_kay_arm_deferred_rekey(kay);
+		else
+			participant->new_sak = true;
 		wpa_printf(MSG_DEBUG, "KaY: I am elected as key server");
 
 		os_memcpy(&kay->key_server_sci, &kay->actor_sci,
@@ -3062,6 +3071,60 @@ ieee802_1x_kay_select_principal(struct ieee802_1x_kay *kay)
 
 
 /**
+ * ieee802_1x_kay_deferred_rekey - Fire the post-promotion key-material rekey
+ *
+ * A promotion keeps running the migrated SAK, so deferring the fresh SAK by a
+ * few hello times lets both ends settle before it runs as an ordinary
+ * make-before-break rekey under the new principal's CKN.
+ */
+static void ieee802_1x_kay_deferred_rekey(void *eloop_ctx, void *timeout_ctx)
+{
+	struct ieee802_1x_kay *kay = eloop_ctx;
+	struct ieee802_1x_mka_participant *principal;
+
+	principal = ieee802_1x_kay_get_principal_participant(kay);
+	if (!principal)
+		return;
+
+	/* Only the key server rekeys, and only with a live peer. If that
+	 * changed since we armed, drop it; the participant timer re-arms if
+	 * the port is left peered with no SA. */
+	if (!principal->is_key_server || dl_list_empty(&principal->live_peers))
+		return;
+
+	/* Ownership moved again before this fired, so restart the window; the
+	 * migrated SAK keeps the data path up meanwhile. */
+	if (kay->principal_changed) {
+		ieee802_1x_kay_arm_deferred_rekey(kay);
+		return;
+	}
+
+	wpa_printf(MSG_DEBUG,
+		   "KaY: deferred post-promotion rekey under principal CKN");
+	principal->new_sak = true;
+}
+
+
+/**
+ * ieee802_1x_kay_arm_deferred_rekey - Arm the coalesced post-promotion rekey
+ *
+ * Non-resetting on purpose: an already-pending deferral keeps its fire time, so
+ * a burst of swaps and the peer churn that follows collapse into one rekey
+ * ~3x hello after the first arm. Only a change of principal restarts the
+ * window, since each new owner needs its own settle time.
+ */
+static void ieee802_1x_kay_arm_deferred_rekey(struct ieee802_1x_kay *kay)
+{
+	if (eloop_is_timeout_registered(ieee802_1x_kay_deferred_rekey, kay,
+					NULL))
+		return;
+	kay->principal_changed = false;
+	eloop_register_timeout((3 * kay->mka_hello_time) / 1000, 0,
+			       ieee802_1x_kay_deferred_rekey, kay, NULL);
+}
+
+
+/**
  * ieee802_1x_kay_reconcile_principal - Act on the principal decision
  *
  * Recomputes the CP owner via select_principal(), assigns it, then drives the
@@ -3092,7 +3155,9 @@ ieee802_1x_kay_reconcile_principal(struct ieee802_1x_kay *kay)
 	if (!prev)
 		return;
 
-	/* No usable MKA remains; tear the data path down. */
+	/* No usable MKA remains; drop any deferred rekey and tear the data path
+	 * down. */
+	eloop_cancel_timeout(ieee802_1x_kay_deferred_rekey, kay, NULL);
 	wpa_printf(MSG_INFO,
 		   "KaY: No CA has a live peer; tearing down the controlled port");
 	kay->authenticated = false;
@@ -3280,6 +3345,17 @@ static void ieee802_1x_participant_timer(void *eloop_ctx, void *timeout_ctx)
 		ieee802_1x_kay_reconcile_principal(kay);
 	}
 
+	/* The deferred rekey is a one-shot that drops itself if the principal
+	 * or its live peers changed while it was pending, and only an ownership
+	 * move re-arms it. Key off the SecY, not to_use_sak: a dropped rekey
+	 * leaves the bookkeeping claiming a SAK the port does not have. */
+	if (kay->macsec_desired && participant->is_key_server &&
+	    ieee802_1x_kay_is_principal_participant(kay, participant) &&
+	    !dl_list_empty(&participant->live_peers) &&
+	    !participant->new_sak && !participant->to_dist_sak &&
+	    kay->txsc && dl_list_empty(&kay->txsc->sa_list))
+		ieee802_1x_kay_arm_deferred_rekey(kay);
+
 	/* Only the principal distributes SAKs, so drop any rekey a demoted CA
 	 * was holding. An unowned port is not a demotion, so it must not clear
 	 * a pending rekey here. */
@@ -3296,6 +3372,9 @@ static void ieee802_1x_participant_timer(void *eloop_ctx, void *timeout_ctx)
 		 * unconditionally would drop the pending rekey entirely. */
 		participant->to_dist_sak = true;
 		participant->new_sak = false;
+		/* This rekey satisfies any pending deferred post-promotion
+		 * rekey, so drop it rather than rotating twice. */
+		eloop_cancel_timeout(ieee802_1x_kay_deferred_rekey, kay, NULL);
 	}
 
 	if (participant->retry_count < MAX_RETRY_CNT ||
@@ -4300,6 +4379,8 @@ ieee802_1x_kay_deinit(struct ieee802_1x_kay *kay)
 		return;
 
 	wpa_printf(MSG_DEBUG, "KaY: state machine removed");
+
+	eloop_cancel_timeout(ieee802_1x_kay_deferred_rekey, kay, NULL);
 
 	while (!dl_list_empty(&kay->participant_list)) {
 		participant = dl_list_entry(kay->participant_list.next,
