@@ -250,6 +250,10 @@ struct ieee802_1x_kay {
 	 * switched atomically when a fallback CKN takes over. */
 	struct ieee802_1x_mka_participant *principal_participant;
 
+	/* Set when the principal changes, cleared when a deferred rekey is
+	 * armed, so a rekey that outlives its principal restarts the window. */
+	bool principal_changed;
+
 	/* The SCs model the single SecY (one per port), so they live on the KaY
 	 * and are shared by every CA. The transmit SC uses the actor SCI; each
 	 * receive SC is keyed by a peer SCI and reference-counted across the
