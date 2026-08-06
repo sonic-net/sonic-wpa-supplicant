@@ -119,6 +119,12 @@ struct receive_sc {
 
 	u32 ssci; /* SSCI - XPN cipher suites only */
 
+	/* Number of MKA participants (CAs) that currently reference this
+	 * receive SC via a live peer with this SCI. The receive SC lives on the
+	 * KaY (one SecY per port), so it is created once and freed only when
+	 * the last CA drops its peer. */
+	int refcnt;
+
 	struct dl_list list;
 	struct dl_list sa_list;
 };
@@ -199,19 +205,21 @@ struct ieee802_1x_kay {
 	enum confidentiality_offset macsec_confidentiality;
 	u32 mka_hello_time;
 
-	u32 ltx_kn;
-	u8 ltx_an;
-	u32 lrx_kn;
-	u8 lrx_an;
+	/* State of the single installed SAK in the SecY (one SecY per port),
+	 * reported by MKA in every SAK Use body. It belongs to the KaY, not to
+	 * a per-CA participant; the principal merely reports it. */
+	struct ieee802_1x_mka_ki lki;
+	u8 lan;
+	bool ltx;
+	bool lrx;
 
-	u32 otx_kn;
-	u8 otx_an;
-	u32 orx_kn;
-	u8 orx_an;
+	struct ieee802_1x_mka_ki oki;
+	u8 oan;
+	bool otx;
+	bool orx;
 
 	/* not defined in IEEE802.1X */
 	struct ieee802_1x_kay_ctx *ctx;
-	bool is_key_server;
 	bool is_obliged_key_server;
 	char if_name[IFNAMSIZ];
 
@@ -236,6 +244,21 @@ struct ieee802_1x_kay {
 
 	struct dl_list participant_list;
 	enum macsec_policy policy;
+
+	/* The principal participant is the MKA that currently owns the CP state
+	 * machine and the SecY (data path) programming. All CP -> KaY
+	 * operations act on this participant. It is an explicit pointer rather
+	 * than a per-participant flag so the CP owner can be looked up cheaply
+	 * and moved atomically. */
+	struct ieee802_1x_mka_participant *principal_participant;
+
+	/* The transmit SC and the receive SCs model the single SecY (one per
+	 * port), so they live on the KaY and are shared by every MKA
+	 * participant. The transmit SC always uses the actor SCI; each receive
+	 * SC is keyed by a peer SCI and reference-counted across the CAs that
+	 * see that peer (see struct receive_sc::refcnt). */
+	struct transmit_sc *txsc;
+	struct dl_list rxsc_list;
 
 	struct ieee802_1x_cp_sm *cp;
 
