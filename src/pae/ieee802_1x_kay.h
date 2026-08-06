@@ -25,6 +25,11 @@ struct macsec_init_params;
 #define MKA_BOUNDED_HELLO_TIME	 500
 #define MKA_LIFE_TIME		6000
 #define MKA_SAK_RETIRE_TIME	3000
+/* Old SAs are normally retired as soon as every live peer confirms it advanced
+ * its transmit to the new SAK. This is only a failsafe ceiling for a peer that
+ * stays live but never confirms, so it must never cut off a slow-but-
+ * progressing peer mid-rotation. */
+#define MKA_SAK_RETIRE_FAILSAFE_TIME	20000
 
 /**
  * struct ieee802_1x_mka_ki - Key Identifier (KI)
