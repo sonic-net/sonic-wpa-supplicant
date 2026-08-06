@@ -3843,6 +3843,7 @@ ieee802_1x_kay_create_mka(struct ieee802_1x_kay *kay,
 {
 	struct ieee802_1x_mka_participant *participant;
 	unsigned int usecs;
+	bool created_txsc = false;
 
 	wpa_printf(MSG_DEBUG,
 		   "KaY: Create MKA (ifname=%s mode=%s authenticator=%s)",
@@ -3950,6 +3951,7 @@ ieee802_1x_kay_create_mka(struct ieee802_1x_kay *kay,
 			       kay->macsec_replay_window);
 	if (secy_create_transmit_sc(kay, participant->txsc))
 		goto fail;
+	created_txsc = true;
 
 	/* to derive KEK from CAK and CKN */
 	participant->kek.len = participant->cak.len;
@@ -3999,7 +4001,14 @@ ieee802_1x_kay_create_mka(struct ieee802_1x_kay *kay,
 	return participant;
 
 fail:
-	os_free(participant->txsc);
+	/* Tear the transmit SC back down if it was already created in the SecY;
+	 * freeing it alone would leak the SC that secy_create_transmit_sc()
+	 * installed. */
+	if (created_txsc)
+		ieee802_1x_kay_deinit_transmit_sc(participant,
+						  participant->txsc);
+	else
+		os_free(participant->txsc);
 	os_free(participant);
 	return NULL;
 }
