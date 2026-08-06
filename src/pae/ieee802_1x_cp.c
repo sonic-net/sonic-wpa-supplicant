@@ -47,6 +47,7 @@ struct ieee802_1x_cp_sm {
 	u8 distributed_an;
 	bool using_receive_sas;
 	bool all_receiving;
+	bool all_transmitting;
 	bool step_pending; /* a deferred step_cb is already queued */
 	bool server_transmitting;
 	bool using_transmit_sa;
@@ -244,6 +245,7 @@ SM_STATE(CP, RECEIVE)
 	ieee802_1x_kay_enable_rx_sas(sm->kay, sm->lki);
 	sm->new_sak = false;
 	sm->all_receiving = false;
+	sm->all_transmitting = false;
 }
 
 
@@ -286,6 +288,7 @@ SM_STATE(CP, TRANSMIT)
 					  sm->ltx, sm->lrx);
 	ieee802_1x_kay_enable_tx_sas(sm->kay,  sm->lki);
 	sm->all_receiving = false;
+	sm->all_transmitting = false;
 	sm->server_transmitting = false;
 }
 
@@ -293,7 +296,14 @@ SM_STATE(CP, TRANSMIT)
 SM_STATE(CP, TRANSMITTING)
 {
 	SM_ENTRY(CP, TRANSMITTING);
-	sm->retire_when = sm->orx ? sm->retire_delay : 0;
+	/* The key server holds the old SA until every live peer has moved its
+	 * transmit to the new SAK (the all_transmitting gate in SM_STEP), so
+	 * retire_when is only a long failsafe for a live peer that never
+	 * confirms. A non key server cannot observe all_transmitting and keeps
+	 * the stock short timer. */
+	sm->retire_when = sm->orx ?
+		(sm->elected_self ? MKA_SAK_RETIRE_FAILSAFE_TIME :
+		 sm->retire_delay) : 0;
 	sm->otx = false;
 	ieee802_1x_kay_set_old_sa_attr(sm->kay, sm->oki, sm->oan,
 				       sm->otx, sm->orx);
@@ -408,7 +418,14 @@ SM_STEP(CP)
 		break;
 
 	case CP_TRANSMITTING:
-		if (!sm->retire_when || changed_connect(sm))
+		/* Retire the old SA once every live peer has advanced its
+		 * transmit to the latest SAK, so a slow peer's old RX SA is not
+		 * torn down while still in use. new_sak must also break out:
+		 * this is the only state with no path back to RECEIVE, and the
+		 * key server distributes regardless of CP state, so waiting on
+		 * the failsafe would leave the next SAK with no receive SA. */
+		if (sm->all_transmitting || !sm->retire_when || sm->new_sak ||
+		    changed_connect(sm))
 			SM_ENTER(CP, RETIRE);
 		break;
 
@@ -689,6 +706,16 @@ void ieee802_1x_cp_set_usingtransmitas(void *cp_ctx, bool status)
 {
 	struct ieee802_1x_cp_sm *sm = cp_ctx;
 	sm->using_transmit_sa = status;
+}
+
+
+/**
+ * ieee802_1x_cp_set_all_transmitting -
+ */
+void ieee802_1x_cp_set_all_transmitting(void *cp_ctx, bool status)
+{
+	struct ieee802_1x_cp_sm *sm = cp_ctx;
+	sm->all_transmitting = status;
 }
 
 

@@ -33,6 +33,7 @@ void ieee802_1x_cp_set_distributedki(void *cp_ctx,
 void ieee802_1x_cp_set_distributedan(void *cp_ctx, u8 an);
 void ieee802_1x_cp_set_usingreceivesas(void *cp_ctx, bool status);
 void ieee802_1x_cp_set_allreceiving(void *cp_ctx, bool status);
+void ieee802_1x_cp_set_all_transmitting(void *cp_ctx, bool status);
 void ieee802_1x_cp_set_servertransmitting(void *cp_ctx, bool status);
 void ieee802_1x_cp_set_usingtransmitas(void *cp_ctx, bool status);
 
