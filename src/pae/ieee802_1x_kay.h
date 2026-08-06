@@ -103,6 +103,7 @@ struct transmit_sc {
 struct transmit_sa {
 	bool in_use; /* bool inUse (read only) */
 	u64 next_pn; /* PN nextPN (read only) */
+	u64 advertised_lpn; /* lowest PN reported in MKPDUs this interval */
 	struct os_time created_time; /* Time createdTime */
 
 	bool enable_transmit; /* bool EnableTransmit */
