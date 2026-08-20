@@ -25,6 +25,11 @@ struct macsec_init_params;
 #define MKA_BOUNDED_HELLO_TIME	 500
 #define MKA_LIFE_TIME		6000
 #define MKA_SAK_RETIRE_TIME	3000
+/* Old SAs are normally retired as soon as every live peer confirms it advanced
+ * its transmit to the new SAK. This is only a failsafe ceiling for a peer that
+ * stays live but never confirms, so it must never cut off a slow-but-
+ * progressing peer mid-rotation. */
+#define MKA_SAK_RETIRE_FAILSAFE_TIME	20000
 
 /**
  * struct ieee802_1x_mka_ki - Key Identifier (KI)
@@ -98,6 +103,7 @@ struct transmit_sc {
 struct transmit_sa {
 	bool in_use; /* bool inUse (read only) */
 	u64 next_pn; /* PN nextPN (read only) */
+	u64 advertised_lpn; /* lowest PN reported in MKPDUs this interval */
 	struct os_time created_time; /* Time createdTime */
 
 	bool enable_transmit; /* bool EnableTransmit */
@@ -118,6 +124,12 @@ struct receive_sc {
 	struct os_time created_time; /* Time createdTime */
 
 	u32 ssci; /* SSCI - XPN cipher suites only */
+
+	/* Number of CAs that currently reference this hardware receive SC via a
+	 * live peer with this SCI. A fallback CA shares the same SC as the
+	 * primary over the same link, so it is created once and freed only when
+	 * the last CA drops its peer. */
+	int refcnt;
 
 	struct dl_list list;
 	struct dl_list sa_list;
@@ -199,19 +211,21 @@ struct ieee802_1x_kay {
 	enum confidentiality_offset macsec_confidentiality;
 	u32 mka_hello_time;
 
-	u32 ltx_kn;
-	u8 ltx_an;
-	u32 lrx_kn;
-	u8 lrx_an;
+	/* State of the single installed SAK in the SecY (one SecY per port),
+	 * reported by MKA in every SAK Use body. It belongs to the KaY, not to
+	 * a per-CA participant; the principal merely reports it. */
+	struct ieee802_1x_mka_ki lki;
+	u8 lan;
+	bool ltx;
+	bool lrx;
 
-	u32 otx_kn;
-	u8 otx_an;
-	u32 orx_kn;
-	u8 orx_an;
+	struct ieee802_1x_mka_ki oki;
+	u8 oan;
+	bool otx;
+	bool orx;
 
 	/* not defined in IEEE802.1X */
 	struct ieee802_1x_kay_ctx *ctx;
-	bool is_key_server;
 	bool is_obliged_key_server;
 	char if_name[IFNAMSIZ];
 
@@ -236,6 +250,22 @@ struct ieee802_1x_kay {
 
 	struct dl_list participant_list;
 	enum macsec_policy policy;
+
+	/* The MKA that currently owns the CP state machine and the SecY (data
+	 * path) programming. An explicit pointer so the CP owner can be
+	 * switched atomically when a fallback CKN takes over. */
+	struct ieee802_1x_mka_participant *principal_participant;
+
+	/* Set when the principal changes, cleared when a deferred rekey is
+	 * armed, so a rekey that outlives its principal restarts the window. */
+	bool principal_changed;
+
+	/* The SCs model the single SecY (one per port), so they live on the KaY
+	 * and are shared by every CA. The transmit SC uses the actor SCI; each
+	 * receive SC is keyed by a peer SCI and reference-counted across the
+	 * CAs that see that peer (see struct receive_sc::refcnt). */
+	struct transmit_sc *txsc;
+	struct dl_list rxsc_list;
 
 	struct ieee802_1x_cp_sm *cp;
 
@@ -263,6 +293,10 @@ ieee802_1x_kay_create_mka(struct ieee802_1x_kay *kay,
 			  const struct mka_key *cak,
 			  u32 life, enum mka_created_mode mode,
 			  bool is_authenticator);
+int ieee802_1x_kay_set_participant_primary(
+	struct ieee802_1x_mka_participant *participant, bool primary);
+struct ieee802_1x_mka_participant *
+ieee802_1x_kay_get_primary_participant(struct ieee802_1x_kay *kay);
 void ieee802_1x_kay_delete_mka(struct ieee802_1x_kay *kay,
 			       struct mka_key_name *ckn);
 void ieee802_1x_kay_mka_participate(struct ieee802_1x_kay *kay,

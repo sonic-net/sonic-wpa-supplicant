@@ -53,6 +53,7 @@ struct ieee802_1x_kay_peer {
 	bool macsec_desired;
 	enum macsec_cap macsec_capability;
 	bool sak_used;
+	bool sak_txed;
 	int missing_sak_use_count;
 	struct dl_list list;
 };
@@ -101,8 +102,11 @@ struct ieee802_1x_mka_participant {
 
 	enum activate_ctrl { DEFAULT, DISABLED, ON_OPER_UP, ALWAYS } activate;
 
-	/* used for active participant */
-	bool principal;
+	/* The privileged CA on this port: it owns the controlled port whenever
+	 * it is eligible, and reclaims ownership as soon as it is live again
+	 * (revertive). At most one participant may set this. Every other CA is
+	 * best effort and only carries the port while the primary cannot. */
+	bool is_primary;
 	struct dl_list live_peers;
 	struct dl_list potential_peers;
 
@@ -112,25 +116,12 @@ struct ieee802_1x_mka_participant {
 	struct mka_key kek;
 	struct mka_key ick;
 
-	struct ieee802_1x_mka_ki lki;
-	u8 lan;
-	bool ltx;
-	bool lrx;
-
-	struct ieee802_1x_mka_ki oki;
-	u8 oan;
-	bool otx;
-	bool orx;
-
 	bool is_key_server;
 	bool is_obliged_key_server;
 	bool can_be_key_server;
 	bool is_elected;
 
 	struct dl_list sak_list;
-	struct dl_list rxsc_list;
-
-	struct transmit_sc *txsc;
 
 	u8 mi[MI_LEN];
 	u32 mn;
