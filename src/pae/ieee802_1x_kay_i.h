@@ -55,6 +55,8 @@ struct ieee802_1x_kay_peer {
 	bool sak_used;
 	bool sak_txed;
 	int missing_sak_use_count;
+	/* ANs the peer last reported an SA on. */
+	u8 sa_an_mask;
 	struct dl_list list;
 };
 
