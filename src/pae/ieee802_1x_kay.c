@@ -1685,6 +1685,12 @@ ieee802_1x_mka_decode_sak_use_body(
 		return 0;
 	}
 
+	peer->sa_an_mask = 0;
+	if (body->ltx || body->lrx)
+		peer->sa_an_mask |= BIT(body->lan);
+	if (body->otx || body->orx)
+		peer->sa_an_mask |= BIT(body->oan);
+
 	/* TODO: when the plain tx or rx of peer is true, should I change
 	 * the attribute of controlled port
 	 */
@@ -2493,6 +2499,87 @@ static void ieee802_1x_kay_deinit_data_key(struct data_key *pkey)
 }
 
 
+static bool ieee802_1x_kay_ki_is_set(const struct ieee802_1x_mka_ki *ki)
+{
+	/* KNs start at 1 and the CP zeroes the KI when it releases the SA. */
+	return ki->kn != 0;
+}
+
+
+/* IEEE Std 802.1AE-2018, 9.6: the AN is two bits, so at most four SAs per SC. */
+#define MAX_AN 4
+
+static unsigned int ieee802_1x_kay_an_count(const struct ieee802_1x_kay *kay)
+{
+	if (kay->max_sa_per_sc < 1 || kay->max_sa_per_sc > MAX_AN)
+		return MAX_AN;
+	return kay->max_sa_per_sc;
+}
+
+
+/**
+ * ieee802_1x_kay_select_dist_an - Pick the AN for the next SAK
+ *
+ * IEEE Std 802.1X-2020, 9.9: the Key Server assigns ANs in sequence, starting
+ * from the first AN after the last SAK in use. A free-running counter gets the
+ * sequence right but not the starting point, so a rekey that follows an
+ * abandoned distribution or a principal handover can land on an AN that still
+ * holds an SA. The SecY then deletes it (IEEE Std 802.1AE-2018, 10.7.13 and
+ * 10.7.22).
+ *
+ * ANs holding one of our own SAs are skipped. An AN only a peer reports is a
+ * key we have already released, so it is taken only when nothing else is free;
+ * excluding it outright would let a peer that never converges block rekeying.
+ */
+static u8 ieee802_1x_kay_select_dist_an(
+	struct ieee802_1x_mka_participant *participant)
+{
+	struct ieee802_1x_kay *kay = participant->kay;
+	struct ieee802_1x_kay_peer *peer;
+	unsigned int max = ieee802_1x_kay_an_count(kay);
+	/* A reduced-SA device forces itself key server (see kay_init), so our
+	 * own ANs are always within max. */
+	u8 next = kay->dist_an;
+	u8 mine = 0, theirs = 0;
+	int fallback = -1;
+	unsigned int i;
+
+	/* Start after the most recently installed SAK, or continue the
+	 * sequence if none is installed. The scan below folds next. */
+	if (ieee802_1x_kay_ki_is_set(&kay->oki)) {
+		mine |= BIT(kay->oan);
+		next = kay->oan + 1;
+	}
+	if (ieee802_1x_kay_ki_is_set(&kay->lki)) {
+		mine |= BIT(kay->lan);
+		next = kay->lan + 1;
+	}
+
+	dl_list_for_each(peer, &participant->live_peers,
+			 struct ieee802_1x_kay_peer, list)
+		theirs |= peer->sa_an_mask;
+
+	for (i = 0; i < max; i++) {
+		u8 an = (next + i) % max;
+
+		if (mine & BIT(an))
+			continue;
+		if (!(theirs & BIT(an)))
+			return an;
+		if (fallback < 0)
+			fallback = an;
+	}
+
+	if (fallback >= 0)
+		return fallback;
+
+	/* No AN is free, so both SAKs are installed. The CP releases one before
+	 * installing the new SAK: it abandons the latest until we transmit on
+	 * it, and retires the old after. Take the one it will free. */
+	return kay->ltx ? kay->oan : kay->lan;
+}
+
+
 /**
  * ieee802_1x_kay_generate_new_sak -
  */
@@ -2507,6 +2594,7 @@ ieee802_1x_kay_generate_new_sak(struct ieee802_1x_mka_participant *participant)
 	unsigned int key_len;
 	u8 *key;
 	struct macsec_ciphersuite *cs;
+	u8 an;
 
 	/* check condition for generating a fresh SAK:
 	 * must have one live peer
@@ -2535,6 +2623,9 @@ ieee802_1x_kay_generate_new_sak(struct ieee802_1x_mka_participant *participant)
 
 	cs = &cipher_suite_tbl[kay->macsec_csindex];
 	key_len = cs->sak_len;
+
+	an = ieee802_1x_kay_select_dist_an(participant);
+
 	key = os_zalloc(key_len);
 	if (!key) {
 		wpa_printf(MSG_ERROR, "KaY-%s: Out of memory", __func__);
@@ -2595,7 +2686,7 @@ ieee802_1x_kay_generate_new_sak(struct ieee802_1x_mka_participant *participant)
 	sa_key->key_identifier.kn = kay->dist_kn;
 
 	sa_key->confidentiality_offset = kay->macsec_confidentiality;
-	sa_key->an = kay->dist_an;
+	sa_key->an = an;
 	if (cs->is_xpn) {
 		os_memcpy(sa_key->salt, &sa_key->key_identifier.mi, MI_LEN);
 		sa_key->salt[0] ^= (sa_key->key_identifier.kn >> 8) & 0xff;
@@ -2626,9 +2717,7 @@ ieee802_1x_kay_generate_new_sak(struct ieee802_1x_mka_participant *participant)
 	}
 
 	kay->dist_kn++;
-	kay->dist_an++;
-	if (kay->dist_an > kay->max_sa_per_sc - 1)
-		kay->dist_an = 0;
+	kay->dist_an = (an + 1) % ieee802_1x_kay_an_count(kay);
 
 	kay->dist_time = time(NULL);
 
