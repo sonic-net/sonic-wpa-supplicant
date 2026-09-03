@@ -1471,10 +1471,17 @@ ieee802_1x_mka_decode_sak_use_body(
 	peer = ieee802_1x_kay_get_live_peer(participant,
 					    participant->current_peer_id.mi);
 	if (!peer) {
-		wpa_printf(MSG_WARNING,
-			   "KaY: The peer (%s) is not my live peer - ignore MACsec SAK Use parameter set",
+		/* A peer can list us as live before we have promoted it to
+		 * live on our side. That is a transient during MKA liveness
+		 * establishment, not an invalid peer, so ignore the parameter
+		 * set and let the peer reach LIVE on a later hello. Returning
+		 * an error would discard the whole MKPDU, and a SAK Use with
+		 * no Distributed SAK triggers a local MI reset, so both ends
+		 * can ping-pong MI resets and never converge. */
+		wpa_printf(MSG_DEBUG,
+			   "KaY: The peer (%s) is not yet my live peer - ignore MACsec SAK Use parameter set",
 			   mi_txt(participant->current_peer_id.mi));
-		return -1;
+		return 0;
 	}
 
 	hdr = (struct ieee802_1x_mka_hdr *) mka_msg;
@@ -3843,6 +3850,7 @@ ieee802_1x_kay_create_mka(struct ieee802_1x_kay *kay,
 {
 	struct ieee802_1x_mka_participant *participant;
 	unsigned int usecs;
+	bool created_txsc = false;
 
 	wpa_printf(MSG_DEBUG,
 		   "KaY: Create MKA (ifname=%s mode=%s authenticator=%s)",
@@ -3950,6 +3958,7 @@ ieee802_1x_kay_create_mka(struct ieee802_1x_kay *kay,
 			       kay->macsec_replay_window);
 	if (secy_create_transmit_sc(kay, participant->txsc))
 		goto fail;
+	created_txsc = true;
 
 	/* to derive KEK from CAK and CKN */
 	participant->kek.len = participant->cak.len;
@@ -3999,7 +4008,14 @@ ieee802_1x_kay_create_mka(struct ieee802_1x_kay *kay,
 	return participant;
 
 fail:
-	os_free(participant->txsc);
+	/* Tear the transmit SC back down if it was already created in the SecY;
+	 * freeing it alone would leak the SC that secy_create_transmit_sc()
+	 * installed. */
+	if (created_txsc)
+		ieee802_1x_kay_deinit_transmit_sc(participant,
+						  participant->txsc);
+	else
+		os_free(participant->txsc);
 	os_free(participant);
 	return NULL;
 }
