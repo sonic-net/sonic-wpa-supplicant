@@ -101,8 +101,6 @@ struct ieee802_1x_mka_participant {
 
 	enum activate_ctrl { DEFAULT, DISABLED, ON_OPER_UP, ALWAYS } activate;
 
-	/* used for active participant */
-	bool principal;
 	struct dl_list live_peers;
 	struct dl_list potential_peers;
 
@@ -112,25 +110,12 @@ struct ieee802_1x_mka_participant {
 	struct mka_key kek;
 	struct mka_key ick;
 
-	struct ieee802_1x_mka_ki lki;
-	u8 lan;
-	bool ltx;
-	bool lrx;
-
-	struct ieee802_1x_mka_ki oki;
-	u8 oan;
-	bool otx;
-	bool orx;
-
 	bool is_key_server;
 	bool is_obliged_key_server;
 	bool can_be_key_server;
 	bool is_elected;
 
 	struct dl_list sak_list;
-	struct dl_list rxsc_list;
-
-	struct transmit_sc *txsc;
 
 	u8 mi[MI_LEN];
 	u32 mn;
