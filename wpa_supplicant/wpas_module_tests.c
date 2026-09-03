@@ -12,6 +12,9 @@
 #include "utils/module_tests.h"
 #include "wpa_supplicant_i.h"
 #include "blacklist.h"
+#ifdef CONFIG_MACSEC
+#include "pae/ieee802_1x_kay.h"
+#endif /* CONFIG_MACSEC */
 
 
 static int wpas_blacklist_module_tests(void)
@@ -109,6 +112,11 @@ int wpas_module_tests(void)
 
 	if (crypto_module_tests() < 0)
 		ret = -1;
+
+#ifdef CONFIG_MACSEC
+	if (ieee802_1x_kay_module_tests() < 0)
+		ret = -1;
+#endif /* CONFIG_MACSEC */
 
 	return ret;
 }
