@@ -491,22 +491,6 @@ ieee802_1x_kay_is_principal_participant(
 }
 
 
-/**
- * ieee802_1x_kay_principal_or_self - Participant whose SecY state to advertise
- *
- * A standby CA reports the principal's SAK usage so peers agree on the active
- * SAK before failover. Before a principal is chosen, fall back to self.
- */
-static struct ieee802_1x_mka_participant *
-ieee802_1x_kay_principal_or_self(struct ieee802_1x_mka_participant *participant)
-{
-	struct ieee802_1x_mka_participant *owner =
-		ieee802_1x_kay_get_principal_participant(participant->kay);
-
-	return owner ? owner : participant;
-}
-
-
 static struct ieee802_1x_kay_peer * get_peer_mi(struct dl_list *peers,
 						const u8 *mi)
 {
@@ -1451,7 +1435,9 @@ static bool
 ieee802_1x_mka_sak_use_body_present(
 	struct ieee802_1x_mka_participant *participant)
 {
-	return ieee802_1x_kay_principal_or_self(participant)->to_use_sak;
+	/* A KI is meaningful only within its CA. Principal migration transfers
+	 * to_use_sak before the incoming CA sends its next MKPDU. */
+	return participant->to_use_sak;
 }
 
 
@@ -1464,8 +1450,7 @@ ieee802_1x_mka_get_sak_use_length(
 {
 	int length = MKA_HDR_LEN;
 
-	if (participant->kay->macsec_desired &&
-	    ieee802_1x_kay_principal_or_self(participant)->advised_desired)
+	if (participant->kay->macsec_desired && participant->advised_desired)
 		length = sizeof(struct ieee802_1x_mka_sak_use_body);
 
 	return MKA_ALIGN_LENGTH(length);
@@ -1524,11 +1509,8 @@ ieee802_1x_mka_encode_sak_use_body(
 {
 	struct ieee802_1x_mka_sak_use_body *body;
 	struct ieee802_1x_kay *kay = participant->kay;
-	struct ieee802_1x_mka_participant *owner;
 	unsigned int length;
 	u64 olpn, llpn;
-
-	owner = ieee802_1x_kay_principal_or_self(participant);
 
 	length = ieee802_1x_mka_get_sak_use_length(participant);
 	body = wpabuf_put(buf, length);
@@ -1556,7 +1538,7 @@ ieee802_1x_mka_encode_sak_use_body(
 	body->llpn = host_to_be32(llpn);
 	/* Only the principal key server drives rekeying; a standby must never
 	 * request a new SAK. */
-	if (participant == owner && participant->is_key_server) {
+	if (participant->is_key_server) {
 		/* The CP will spend most of it's time in RETIRE where only
 		 * the old key is populated. Therefore we should be checking
 		 * the OLPN most of the time.
@@ -3068,6 +3050,57 @@ ieee802_1x_kay_select_principal(struct ieee802_1x_kay *kay)
 
 	return NULL;
 }
+
+
+#ifdef CONFIG_MODULE_TESTS
+int ieee802_1x_kay_module_tests(void)
+{
+	struct ieee802_1x_kay kay;
+	struct ieee802_1x_mka_participant primary, fallback;
+	int ret = -1;
+
+	os_memset(&kay, 0, sizeof(kay));
+	os_memset(&primary, 0, sizeof(primary));
+	os_memset(&fallback, 0, sizeof(fallback));
+	dl_list_init(&kay.participant_list);
+	dl_list_init(&primary.live_peers);
+	dl_list_init(&fallback.live_peers);
+	primary.kay = &kay;
+	primary.is_primary = true;
+	primary.to_use_sak = true;
+	primary.advised_desired = true;
+	fallback.kay = &kay;
+	dl_list_add(&kay.participant_list, &primary.list);
+	dl_list_add(&kay.participant_list, &fallback.list);
+	kay.principal_participant = &primary;
+	kay.macsec_desired = true;
+
+	/* SAK Use is scoped to its CA. Advertising the principal's KI under the
+	 * standby CKN leaves strict peers unable to select either actor. */
+	if (!ieee802_1x_mka_sak_use_body_present(&primary) ||
+	    ieee802_1x_mka_sak_use_body_present(&fallback) ||
+	    ieee802_1x_mka_get_sak_use_length(&fallback) != MKA_HDR_LEN)
+		goto fail;
+
+	/* Principal migration transfers this state before the next MKPDU. */
+	primary.to_use_sak = false;
+	fallback.to_use_sak = true;
+	fallback.advised_desired = true;
+	kay.principal_participant = &fallback;
+	if (ieee802_1x_mka_sak_use_body_present(&primary) ||
+	    !ieee802_1x_mka_sak_use_body_present(&fallback) ||
+	    ieee802_1x_mka_get_sak_use_length(&fallback) !=
+	    sizeof(struct ieee802_1x_mka_sak_use_body))
+		goto fail;
+
+	ret = 0;
+fail:
+	if (ret)
+		wpa_printf(MSG_ERROR,
+			   "KaY module test failure: SAK Use CA ownership");
+	return ret;
+}
+#endif /* CONFIG_MODULE_TESTS */
 
 
 /**
