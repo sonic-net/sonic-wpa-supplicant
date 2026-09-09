@@ -492,10 +492,11 @@ ieee802_1x_kay_is_principal_participant(
 
 
 /**
- * ieee802_1x_kay_principal_or_self - Participant whose SecY state to advertise
+ * ieee802_1x_kay_principal_or_self - Participant reporting SecY state
  *
- * A standby CA reports the principal's SAK usage so peers agree on the active
- * SAK before failover. Before a principal is chosen, fall back to self.
+ * SAK Use is present in every actor's MKPDUs once the shared SecY is using a
+ * SAK. Only the principal actor encodes the shared key state; other actors
+ * send a full-length SAK Use body with those fields clear (802.1X-2020 12.2).
  */
 static struct ieee802_1x_mka_participant *
 ieee802_1x_kay_principal_or_self(struct ieee802_1x_mka_participant *participant)
@@ -1532,6 +1533,7 @@ ieee802_1x_mka_encode_sak_use_body(
 
 	length = ieee802_1x_mka_get_sak_use_length(participant);
 	body = wpabuf_put(buf, length);
+	os_memset(body, 0, length);
 
 	body->type = MKA_SAK_USE;
 	set_mka_param_body_len(body, length - MKA_HDR_LEN);
@@ -1545,6 +1547,15 @@ ieee802_1x_mka_encode_sak_use_body(
 		body->delay_protect = false;
 		return 0;
 	}
+
+	/* Plain-text status belongs to the shared SecY. */
+	body->ptx = !kay->macsec_protect;
+	body->prx = kay->macsec_validate != Strict;
+
+	/* The SAK Use parameter remains present on standby actors, but only the
+	 * principal actor reports the shared SecY's key state. */
+	if (participant != owner)
+		return 0;
 
 	/* data delay protect */
 	body->delay_protect = kay->mka_hello_time <= MKA_BOUNDED_HELLO_TIME;
@@ -1582,10 +1593,6 @@ ieee802_1x_mka_encode_sak_use_body(
 			}
 		}
 	}
-
-	/* plain tx, plain rx */
-	body->ptx = !kay->macsec_protect;
-	body->prx = kay->macsec_validate != Strict;
 
 	/* latest key: rx, tx, key server member identifier key number */
 	body->lan = kay->lan;
