@@ -963,6 +963,32 @@ struct wpa_ssid {
 	 * mka_psk_set - Whether mka_ckn and mka_cak are set
 	 */
 	u8 mka_psk_set;
+
+	/**
+	 * mka_ckn_fallback - MKA pre-shared fallback CKN
+	 *
+	 * Optional secondary CKN used to bring up a standby MKA participant
+	 * alongside the primary one. If the primary CA fails, CP ownership
+	 * fails over to this fallback CKN and subsequent SAKs are distributed
+	 * under it without tearing down the datapath.
+	 */
+	size_t mka_ckn_fallback_len;
+	u8 mka_ckn_fallback[MACSEC_CKN_MAX_LEN];
+
+	/**
+	 * mka_cak_fallback - MKA pre-shared fallback CAK
+	 */
+	size_t mka_cak_fallback_len;
+	u8 mka_cak_fallback[MACSEC_CAK_MAX_LEN];
+
+#define MKA_PSK_SET_CKN_FALLBACK BIT(0)
+#define MKA_PSK_SET_CAK_FALLBACK BIT(1)
+#define MKA_PSK_SET_FALLBACK \
+	(MKA_PSK_SET_CKN_FALLBACK | MKA_PSK_SET_CAK_FALLBACK)
+	/**
+	 * mka_psk_set_fallback - Whether the fallback CKN and CAK are set
+	 */
+	u8 mka_psk_set_fallback;
 #endif /* CONFIG_MACSEC */
 
 #ifdef CONFIG_HS20
