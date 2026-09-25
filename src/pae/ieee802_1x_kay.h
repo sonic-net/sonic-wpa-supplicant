@@ -243,6 +243,11 @@ struct ieee802_1x_kay {
 
 	enum validate_frames vf;
 	enum confidentiality_offset co;
+
+	/* RX MKPDUs dropped because the CKN matched no local CA, counted per
+	 * port and exposed via the KaY status (wpa_cli STATUS). */
+	u64 mkpdu_unknown_ckn;
+	time_t mkpdu_unknown_ckn_last_log;
 };
 
 

@@ -2,7 +2,8 @@ ALL=test-base64 test-md4 test-milenage \
 	test-rsa-sig-ver \
 	test-sha1 \
 	test-https test-https_server \
-	test-sha256 test-aes test-x509v3 test-list test-rc4
+	test-sha256 test-aes test-x509v3 test-list test-rc4 \
+	test-macsec_unknown_ckn
 
 include ../src/build.rules
 
@@ -44,6 +45,12 @@ LLIBS = -Wl,--start-group $(DLIBS) -Wl,--end-group $(SLIBS)
 
 # glibc < 2.17 needs -lrt for clock_gettime()
 LLIBS += -lrt
+
+# MACsec unknown-CKN drop regression test. Self-contained: it #includes the KaY
+# module and stubs its SecY/CP/eloop/crypto/l2_packet dependencies, so it needs
+# no libraries -- only the source headers.
+test-macsec_unknown_ckn: test-macsec_unknown_ckn.c ../src/pae/ieee802_1x_kay.c
+	$(CC) $(CFLAGS) -I../src -I../src/utils -DCONFIG_MACSEC -DIEEE8021X_EAPOL -o $@ $<
 
 test-aes: $(call BUILDOBJ,test-aes.o) $(LIBS)
 	$(LDO) $(LDFLAGS) -o $@ $^ $(LLIBS)
@@ -90,6 +97,7 @@ run-tests: $(ALL)
 	./test-rsa-sig-ver
 	./test-sha1
 	./test-sha256
+	./test-macsec_unknown_ckn
 	@echo
 	@echo All tests completed successfully.
 

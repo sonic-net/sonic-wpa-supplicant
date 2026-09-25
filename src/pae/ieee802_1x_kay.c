@@ -3324,7 +3324,30 @@ static int ieee802_1x_kay_mkpdu_sanity_check(struct ieee802_1x_kay *kay,
 	/* CKN should be owned by I */
 	participant = ieee802_1x_kay_get_participant(kay, body->ckn, ckn_len);
 	if (!participant) {
-		wpa_printf(MSG_DEBUG, "KaY: CKN is not included in my CA");
+		time_t now = time(NULL);
+
+		kay->mkpdu_unknown_ckn++;
+		/*
+		 * A corrupted or foreign CKN repeats on every MKPDU (~2 s), so
+		 * rate-limit the log to once per minute per port; the first
+		 * drop is always logged. Raised from MSG_DEBUG so a silent,
+		 * one-directional MACsec teardown is visible at the deployed
+		 * log level. The running count is exported via wpa_cli STATUS.
+		 *
+		 * Dump the received CKN too: diffed against the "ckn=" in that
+		 * same STATUS output, it separates a corrupted CKN from a peer
+		 * in a different CA. The CKN is not secret - it travels in the
+		 * clear in every MKPDU.
+		 */
+		if (kay->mkpdu_unknown_ckn_last_log == 0 ||
+		    now - kay->mkpdu_unknown_ckn_last_log >= 60) {
+			wpa_printf(MSG_WARNING,
+				   "KaY: CKN is not included in my CA - dropping MKPDU on %s (unknown-CKN drops: %" PRIu64 ")",
+				   kay->if_name, kay->mkpdu_unknown_ckn);
+			wpa_hexdump(MSG_WARNING, "KaY: unknown CKN",
+				    body->ckn, ckn_len);
+			kay->mkpdu_unknown_ckn_last_log = now;
+		}
 		return -1;
 	}
 
@@ -4191,7 +4214,8 @@ int ieee802_1x_kay_get_status(struct ieee802_1x_kay *kay, char *buf,
 			  "Is Key Server=%s\n"
 			  "Number of Keys Distributed=%u\n"
 			  "Number of Keys Received=%u\n"
-			  "MKA Hello Time=%u\n",
+			  "MKA Hello Time=%u\n"
+			  "MKPDU Unknown CKN Drops=%" PRIu64 "\n",
 			  kay->active ? "Active" : "Not-Active",
 			  kay->authenticated ? "Yes" : "No",
 			  kay->secured ? "Yes" : "No",
@@ -4201,7 +4225,8 @@ int ieee802_1x_kay_get_status(struct ieee802_1x_kay *kay, char *buf,
 			  kay->is_key_server ? "Yes" : "No",
 			  kay->dist_kn - 1,
 			  kay->rcvd_keys,
-			  kay->mka_hello_time);
+			  kay->mka_hello_time,
+			  kay->mkpdu_unknown_ckn);
 	if (os_snprintf_error(end - pos, res))
 		return 0;
 	pos += res;
