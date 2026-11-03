@@ -307,6 +307,10 @@ SM_STATE(CP, TRANSMITTING)
 SM_STATE(CP, ABANDON)
 {
 	SM_ENTRY(CP, ABANDON);
+	/* enable_tx_sas() only ever sets usingTransmitSA; clear it here so a
+	 * stale value cannot drive TRANSMIT -> TRANSMITTING before the new
+	 * transmit SA is installed. */
+	sm->using_transmit_sa = false;
 	sm->lrx = false;
 	ieee802_1x_kay_set_latest_sa_attr(sm->kay, sm->lki, sm->lan,
 					  sm->ltx, sm->lrx);
@@ -402,7 +406,12 @@ SM_STEP(CP)
 		break;
 
 	case CP_TRANSMIT:
-		if (sm->using_transmit_sa)
+		/* Escape on new SAK or connectivity change so the CP cannot
+		 * wedge here when usingTransmitSA never asserts. Mirrors
+		 * CP_RECEIVING / CP_READY. */
+		if (sm->new_sak || changed_connect(sm))
+			SM_ENTER(CP, ABANDON);
+		else if (sm->using_transmit_sa)
 			SM_ENTER(CP, TRANSMITTING);
 		break;
 
