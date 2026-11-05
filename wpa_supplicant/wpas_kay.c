@@ -433,16 +433,132 @@ void * ieee802_1x_create_preshared_mka(struct wpa_supplicant *wpa_s,
 	os_memcpy(ckn->name, ssid->mka_ckn, ckn->len);
 
 	res = ieee802_1x_kay_create_mka(wpa_s->kay, ckn, cak, 0, PSK, false);
-	if (res)
-		goto free_cak;
+	if (!res)
+		goto dealloc;
+	ieee802_1x_kay_set_participant_primary(res, true);
+
+	/* Optionally bring up a best-effort MKA participant for the fallback
+	 * CKN. It shares the same KaY/SecY as the primary and only takes over
+	 * the controlled port if the primary CA fails (see the KaY failover
+	 * path). */
+	if ((ssid->mka_psk_set_fallback & MKA_PSK_SET_FALLBACK) ==
+	    MKA_PSK_SET_FALLBACK &&
+	    wpas_macsec_add_mka(wpa_s, ssid->mka_ckn_fallback,
+				ssid->mka_ckn_fallback_len,
+				ssid->mka_cak_fallback,
+				ssid->mka_cak_fallback_len, 0))
+		wpa_printf(MSG_WARNING,
+			   "MACsec: Failed to create fallback MKA participant");
+
+	goto free_cak;
 
 dealloc:
 	/* Failed to create MKA */
 	ieee802_1x_dealloc_kay_sm(wpa_s);
 free_cak:
+	forced_memzero(cak, sizeof(*cak));
 	os_free(cak);
 free_ckn:
 	os_free(ckn);
 end:
 	return res;
+}
+
+
+/**
+ * wpas_macsec_add_mka - Runtime-create a preshared MKA participant
+ *
+ * Adds an MKA participant (CA) for @ckn/@cak that shares the current KaY and
+ * SecY. Used to install a primary or fallback CAK at run time (e.g. via the
+ * control interface) so that a CAK can be rotated without tearing the port
+ * down. If @primary is set the participant claims the controlled port whenever
+ * it is eligible; otherwise it is best effort and only carries the port while
+ * the primary CA has no live peer.
+ */
+int wpas_macsec_add_mka(struct wpa_supplicant *wpa_s, const u8 *ckn,
+			size_t ckn_len, const u8 *cak, size_t cak_len,
+			int primary)
+{
+	struct mka_key_name ckn_s;
+	struct mka_key cak_s;
+	struct ieee802_1x_mka_participant *participant;
+
+	if (!wpa_s->kay) {
+		wpa_printf(MSG_INFO, "MACsec: KaY is not active on %s",
+			   wpa_s->ifname);
+		return -1;
+	}
+	if (ckn_len == 0 || ckn_len > MAX_CKN_LEN) {
+		wpa_printf(MSG_INFO, "MACsec: Invalid CKN length %u",
+			   (unsigned int) ckn_len);
+		return -1;
+	}
+	if (cak_len != 16 && cak_len != 32) {
+		wpa_printf(MSG_INFO, "MACsec: Invalid CAK length %u",
+			   (unsigned int) cak_len);
+		return -1;
+	}
+
+	/* Reject a second primary up front: the port has exactly one, and
+	 * creating the participant first would have to be undone against the
+	 * SecY. */
+	if (primary && ieee802_1x_kay_get_primary_participant(wpa_s->kay)) {
+		wpa_printf(MSG_INFO,
+			   "MACsec: %s already has a primary CA; remove it before adding another",
+			   wpa_s->ifname);
+		return -1;
+	}
+
+	os_memset(&ckn_s, 0, sizeof(ckn_s));
+	ckn_s.len = ckn_len;
+	os_memcpy(ckn_s.name, ckn, ckn_len);
+
+	os_memset(&cak_s, 0, sizeof(cak_s));
+	cak_s.len = cak_len;
+	os_memcpy(cak_s.key, cak, cak_len);
+
+	participant = ieee802_1x_kay_create_mka(wpa_s->kay, &ckn_s, &cak_s, 0,
+						PSK, false);
+	forced_memzero(&cak_s, sizeof(cak_s));
+	if (!participant) {
+		wpa_printf(MSG_INFO, "MACsec: Failed to add MKA participant");
+		return -1;
+	}
+
+	if (primary)
+		ieee802_1x_kay_set_participant_primary(participant, true);
+
+	return 0;
+}
+
+
+/**
+ * wpas_macsec_del_mka - Runtime-remove a preshared MKA participant
+ *
+ * Removes the MKA participant identified by @ckn. If it was the CP owner, the
+ * KaY re-runs its election so a surviving CA takes over the controlled port.
+ */
+int wpas_macsec_del_mka(struct wpa_supplicant *wpa_s, const u8 *ckn,
+			size_t ckn_len)
+{
+	struct mka_key_name ckn_s;
+
+	if (!wpa_s->kay) {
+		wpa_printf(MSG_INFO, "MACsec: KaY is not active on %s",
+			   wpa_s->ifname);
+		return -1;
+	}
+	if (ckn_len == 0 || ckn_len > MAX_CKN_LEN) {
+		wpa_printf(MSG_INFO, "MACsec: Invalid CKN length %u",
+			   (unsigned int) ckn_len);
+		return -1;
+	}
+
+	os_memset(&ckn_s, 0, sizeof(ckn_s));
+	ckn_s.len = ckn_len;
+	os_memcpy(ckn_s.name, ckn, ckn_len);
+
+	ieee802_1x_kay_delete_mka(wpa_s->kay, &ckn_s);
+
+	return 0;
 }

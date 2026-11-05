@@ -20,6 +20,12 @@ void ieee802_1x_dealloc_kay_sm(struct wpa_supplicant *wpa_s);
 void * ieee802_1x_create_preshared_mka(struct wpa_supplicant *wpa_s,
 				       struct wpa_ssid *ssid);
 
+int wpas_macsec_add_mka(struct wpa_supplicant *wpa_s, const u8 *ckn,
+			size_t ckn_len, const u8 *cak, size_t cak_len,
+			int primary);
+int wpas_macsec_del_mka(struct wpa_supplicant *wpa_s, const u8 *ckn,
+			size_t ckn_len);
+
 #else /* CONFIG_MACSEC */
 
 static inline int ieee802_1x_alloc_kay_sm(struct wpa_supplicant *wpa_s,
@@ -44,6 +50,20 @@ ieee802_1x_create_preshared_mka(struct wpa_supplicant *wpa_s,
 				struct wpa_ssid *ssid)
 {
 	return 0;
+}
+
+static inline int wpas_macsec_add_mka(struct wpa_supplicant *wpa_s,
+				      const u8 *ckn, size_t ckn_len,
+				      const u8 *cak, size_t cak_len,
+				      int primary)
+{
+	return -1;
+}
+
+static inline int wpas_macsec_del_mka(struct wpa_supplicant *wpa_s,
+				      const u8 *ckn, size_t ckn_len)
+{
+	return -1;
 }
 
 #endif /* CONFIG_MACSEC */

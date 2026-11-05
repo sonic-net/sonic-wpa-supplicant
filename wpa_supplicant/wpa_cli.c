@@ -312,6 +312,34 @@ static int wpa_cli_cmd_macsec(struct wpa_ctrl *ctrl, int argc, char *argv[])
 		return wpa_ctrl_command(ctrl, "MACSEC-VERBOSE");
 	return wpa_ctrl_command(ctrl, "MACSEC");
 }
+
+
+static int wpa_cli_cmd_macsec_add_mka(struct wpa_ctrl *ctrl, int argc,
+				      char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "MACSEC_ADD_MKA", 2, argc, argv);
+}
+
+
+static int wpa_cli_cmd_macsec_del_mka(struct wpa_ctrl *ctrl, int argc,
+				      char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "MACSEC_DEL_MKA", 1, argc, argv);
+}
+
+
+static int wpa_cli_cmd_macsec_mka_list(struct wpa_ctrl *ctrl, int argc,
+				       char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "MACSEC_MKA_LIST");
+}
+
+
+static int wpa_cli_cmd_macsec_rekey(struct wpa_ctrl *ctrl, int argc,
+				    char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "MACSEC_REKEY");
+}
 #endif /* CONFIG_MACSEC */
 
 
@@ -3641,6 +3669,18 @@ static const struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "macsec", wpa_cli_cmd_macsec, NULL,
 	  cli_cmd_flag_none,
 	  "[verbose] = get current MACsec status" },
+	{ "macsec_add_mka", wpa_cli_cmd_macsec_add_mka, NULL,
+	  cli_cmd_flag_sensitive,
+	  "ckn=<hex> cak=<hex> [fallback=1] = add a preshared MKA participant" },
+	{ "macsec_del_mka", wpa_cli_cmd_macsec_del_mka, NULL,
+	  cli_cmd_flag_none,
+	  "ckn=<hex> = remove a preshared MKA participant" },
+	{ "macsec_mka_list", wpa_cli_cmd_macsec_mka_list, NULL,
+	  cli_cmd_flag_none,
+	  "= list MKA participants (CKN, principal/primary role, peers)" },
+	{ "macsec_rekey", wpa_cli_cmd_macsec_rekey, NULL,
+	  cli_cmd_flag_none,
+	  "= force the key server to distribute a fresh SAK" },
 #endif /* CONFIG_MACSEC */
 	{ "vendor_elem_add", wpa_cli_cmd_vendor_elem_add, NULL,
 	  cli_cmd_flag_none,

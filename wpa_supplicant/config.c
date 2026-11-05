@@ -2138,26 +2138,60 @@ static char * wpa_config_write_mesh_basic_rates(const struct parse_data *data,
 
 #ifdef CONFIG_MACSEC
 
-static int wpa_config_parse_mka_cak(const struct parse_data *data,
-				    struct wpa_ssid *ssid, int line,
-				    const char *value)
+/* The primary and fallback CAK/CKN differ only in which ssid fields they land
+ * in, so both sets of parse handlers share these helpers. */
+
+static int wpa_config_parse_cak(int line, const char *value, const char *name,
+				u8 *cak, size_t *cak_len, u8 *psk_set,
+				u8 psk_flag)
 {
 	size_t len;
 
 	len = os_strlen(value);
 	if (len > 2 * MACSEC_CAK_MAX_LEN ||
 	    (len != 2 * 16 && len != 2 * 32) ||
-	    hexstr2bin(value, ssid->mka_cak, len / 2)) {
-		wpa_printf(MSG_ERROR, "Line %d: Invalid MKA-CAK '%s'.",
-			   line, value);
+	    hexstr2bin(value, cak, len / 2)) {
+		wpa_printf(MSG_ERROR, "Line %d: Invalid %s.", line, name);
 		return -1;
 	}
-	ssid->mka_cak_len = len / 2;
-	ssid->mka_psk_set |= MKA_PSK_SET_CAK;
+	*cak_len = len / 2;
+	*psk_set |= psk_flag;
 
-	wpa_hexdump_key(MSG_MSGDUMP, "MKA-CAK", ssid->mka_cak,
-			ssid->mka_cak_len);
+	wpa_hexdump_key(MSG_MSGDUMP, name, cak, *cak_len);
 	return 0;
+}
+
+
+static int wpa_config_parse_ckn(int line, const char *value, const char *name,
+				u8 *ckn, size_t *ckn_len, u8 *psk_set,
+				u8 psk_flag)
+{
+	size_t len;
+
+	len = os_strlen(value);
+	if (len > 2 * MACSEC_CKN_MAX_LEN || /* too long */
+	    len < 2 || /* too short */
+	    len % 2 != 0 || /* not an integral number of bytes */
+	    hexstr2bin(value, ckn, len / 2)) {
+		wpa_printf(MSG_ERROR, "Line %d: Invalid %s '%s'.",
+			   line, name, value);
+		return -1;
+	}
+	*ckn_len = len / 2;
+	*psk_set |= psk_flag;
+
+	wpa_hexdump_key(MSG_MSGDUMP, name, ckn, *ckn_len);
+	return 0;
+}
+
+
+static int wpa_config_parse_mka_cak(const struct parse_data *data,
+				    struct wpa_ssid *ssid, int line,
+				    const char *value)
+{
+	return wpa_config_parse_cak(line, value, "MKA-CAK", ssid->mka_cak,
+				    &ssid->mka_cak_len, &ssid->mka_psk_set,
+				    MKA_PSK_SET_CAK);
 }
 
 
@@ -2165,28 +2199,33 @@ static int wpa_config_parse_mka_ckn(const struct parse_data *data,
 				    struct wpa_ssid *ssid, int line,
 				    const char *value)
 {
-	size_t len;
+	return wpa_config_parse_ckn(line, value, "MKA-CKN", ssid->mka_ckn,
+				    &ssid->mka_ckn_len, &ssid->mka_psk_set,
+				    MKA_PSK_SET_CKN);
+}
 
-	len = os_strlen(value);
-	if (len > 2 * MACSEC_CKN_MAX_LEN || /* too long */
-	    len < 2 || /* too short */
-	    len % 2 != 0 /* not an integral number of bytes */) {
-		wpa_printf(MSG_ERROR, "Line %d: Invalid MKA-CKN '%s'.",
-			   line, value);
-		return -1;
-	}
-	ssid->mka_ckn_len = len / 2;
-	if (hexstr2bin(value, ssid->mka_ckn, ssid->mka_ckn_len)) {
-		wpa_printf(MSG_ERROR, "Line %d: Invalid MKA-CKN '%s'.",
-			   line, value);
-		return -1;
-	}
 
-	ssid->mka_psk_set |= MKA_PSK_SET_CKN;
+static int wpa_config_parse_mka_cak_fallback(const struct parse_data *data,
+					     struct wpa_ssid *ssid, int line,
+					     const char *value)
+{
+	return wpa_config_parse_cak(line, value, "MKA-CAK-Fallback",
+				    ssid->mka_cak_fallback,
+				    &ssid->mka_cak_fallback_len,
+				    &ssid->mka_psk_set_fallback,
+				    MKA_PSK_SET_CAK_FALLBACK);
+}
 
-	wpa_hexdump_key(MSG_MSGDUMP, "MKA-CKN", ssid->mka_ckn,
-			ssid->mka_ckn_len);
-	return 0;
+
+static int wpa_config_parse_mka_ckn_fallback(const struct parse_data *data,
+					     struct wpa_ssid *ssid, int line,
+					     const char *value)
+{
+	return wpa_config_parse_ckn(line, value, "MKA-CKN-Fallback",
+				    ssid->mka_ckn_fallback,
+				    &ssid->mka_ckn_fallback_len,
+				    &ssid->mka_psk_set_fallback,
+				    MKA_PSK_SET_CKN_FALLBACK);
 }
 
 
@@ -2208,6 +2247,27 @@ static char * wpa_config_write_mka_ckn(const struct parse_data *data,
 	if (!(ssid->mka_psk_set & MKA_PSK_SET_CKN))
 		return NULL;
 	return wpa_config_write_string_hex(ssid->mka_ckn, ssid->mka_ckn_len);
+}
+
+
+static char * wpa_config_write_mka_cak_fallback(const struct parse_data *data,
+						struct wpa_ssid *ssid)
+{
+	if (!(ssid->mka_psk_set_fallback & MKA_PSK_SET_CAK_FALLBACK))
+		return NULL;
+
+	return wpa_config_write_string_hex(ssid->mka_cak_fallback,
+					   ssid->mka_cak_fallback_len);
+}
+
+
+static char * wpa_config_write_mka_ckn_fallback(const struct parse_data *data,
+						struct wpa_ssid *ssid)
+{
+	if (!(ssid->mka_psk_set_fallback & MKA_PSK_SET_CKN_FALLBACK))
+		return NULL;
+	return wpa_config_write_string_hex(ssid->mka_ckn_fallback,
+					   ssid->mka_ckn_fallback_len);
 }
 
 #endif /* NO_CONFIG_WRITE */
@@ -2564,6 +2624,8 @@ static const struct parse_data ssid_fields[] = {
 	{ INT_RANGE(mka_priority, 0, 255) },
 	{ FUNC_KEY(mka_cak) },
 	{ FUNC_KEY(mka_ckn) },
+	{ FUNC_KEY(mka_cak_fallback) },
+	{ FUNC_KEY(mka_ckn_fallback) },
 #endif /* CONFIG_MACSEC */
 #ifdef CONFIG_HS20
 	{ INT(update_identifier) },
