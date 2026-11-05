@@ -1471,10 +1471,18 @@ ieee802_1x_mka_decode_sak_use_body(
 	peer = ieee802_1x_kay_get_live_peer(participant,
 					    participant->current_peer_id.mi);
 	if (!peer) {
-		wpa_printf(MSG_WARNING,
-			   "KaY: The peer (%s) is not my live peer - ignore MACsec SAK Use parameter set",
+		/* A peer can list us as live before we have promoted it to
+		 * live on our side. That is a transient during MKA liveness
+		 * establishment, not an invalid peer, so ignore the parameter
+		 * set and let the peer reach LIVE on a later hello. If SAK Use
+		 * decoding returns an error and the MKPDU has no Distributed
+		 * SAK, decode_mkpdu() discards the MKPDU and resets our MI.
+		 * Avoid treating this transient as an error, which can make
+		 * both ends repeatedly reset their MIs instead of converging. */
+		wpa_printf(MSG_DEBUG,
+			   "KaY: The peer (%s) is not yet my live peer - ignore MACsec SAK Use parameter set",
 			   mi_txt(participant->current_peer_id.mi));
-		return -1;
+		return 0;
 	}
 
 	hdr = (struct ieee802_1x_mka_hdr *) mka_msg;
@@ -3943,13 +3951,6 @@ ieee802_1x_kay_create_mka(struct ieee802_1x_kay *kay,
 	dl_list_init(&participant->sak_list);
 	participant->new_key = NULL;
 	dl_list_init(&participant->rxsc_list);
-	participant->txsc = ieee802_1x_kay_init_transmit_sc(&kay->actor_sci);
-	secy_cp_control_protect_frames(kay, kay->macsec_protect);
-	secy_cp_control_current_cipher_suite(kay, kay->macsec_cs_id);
-	secy_cp_control_replay(kay, kay->macsec_replay_protect,
-			       kay->macsec_replay_window);
-	if (secy_create_transmit_sc(kay, participant->txsc))
-		goto fail;
 
 	/* to derive KEK from CAK and CKN */
 	participant->kek.len = participant->cak.len;
@@ -3978,6 +3979,14 @@ ieee802_1x_kay_create_mka(struct ieee802_1x_kay *kay,
 	}
 	wpa_hexdump_key(MSG_DEBUG, "KaY: Derived ICK",
 			participant->ick.key, participant->ick.len);
+
+	participant->txsc = ieee802_1x_kay_init_transmit_sc(&kay->actor_sci);
+	secy_cp_control_protect_frames(kay, kay->macsec_protect);
+	secy_cp_control_current_cipher_suite(kay, kay->macsec_cs_id);
+	secy_cp_control_replay(kay, kay->macsec_replay_protect,
+			       kay->macsec_replay_window);
+	if (secy_create_transmit_sc(kay, participant->txsc))
+		goto fail;
 
 	dl_list_add(&kay->participant_list, &participant->list);
 
