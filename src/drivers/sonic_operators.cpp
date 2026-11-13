@@ -140,7 +140,7 @@ private:
 
 public:
     sonic_db_manager():
-        m_app_db("APPL_DB", 0),
+        m_app_db("APPL_DB", 0, false, "", true),
         m_state_db("STATE_DB", 0),
         m_counters_db("COUNTERS_DB", 0)
         {
