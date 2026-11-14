@@ -985,7 +985,8 @@ endif
 
 ifdef CONFIG_PCSC
 # PC/SC interface for smartcards (USIM, GSM SIM)
-CFLAGS += -DPCSC_FUNCS -I/usr/include/PCSC
+PCSC_CFLAGS ?= -I/usr/include/PCSC
+CFLAGS += -DPCSC_FUNCS $(PCSC_CFLAGS)
 OBJS += ../src/utils/pcsc_funcs.o
 # -lpthread may not be needed depending on how pcsc-lite was configured
 ifdef CONFIG_NATIVE_WINDOWS
@@ -1607,7 +1608,8 @@ endif
 
 ifdef CONFIG_READLINE
 OBJS_c += ../src/utils/edit_readline.o
-LIBS_c += -lreadline -lncurses
+NCURSES_LIBS ?= -lncurses
+LIBS_c += -lreadline $(NCURSES_LIBS)
 else
 ifdef CONFIG_WPA_CLI_EDIT
 OBJS_c += ../src/utils/edit.o

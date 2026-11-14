@@ -6,3 +6,8 @@ wpaspy/build
 **/parallel-vm.log
 tags
 build/
+/bazel-*
+/MODULE.bazel.lock
+/.bazelrc.user
+
+/bazel-evidence/

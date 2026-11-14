@@ -1,0 +1,39 @@
+module(name = "sonic-wpa-supplicant", version = "2.9.0.sonic.1", bazel_compatibility = [">=8.5.1", "<=8.5.1"])
+
+bazel_dep(name = "bazel_skylib", version = "1.9.2")
+bazel_dep(name = "platforms", version = "1.1.0")
+bazel_dep(name = "rules_cc", version = "0.2.22")
+bazel_dep(name = "rules_python", version = "1.9.0.sonic.1")
+bazel_dep(name = "rules_rs", version = "0.1.0")
+bazel_dep(name = "rules_gzip", version = "1.0.0")
+bazel_dep(name = "rules_distroless", version = "0.9.4.sonic.18")
+bazel_dep(name = "tar.bzl", version = "0.10.5.sonic.2")
+bazel_dep(name = "sonic-build-infra", version = "0.0.34-a4723268cd72a573ed316ab75347e698cc3f86ab", repo_name = "sonic_build_infra")
+bazel_dep(name = "sonic-swss-common", version = "0.0.9-334389eae54afd1f4f5ee69f89c3a7ad2062ee61", repo_name = "sonic_swss_common")
+bazel_dep(name = "sonic-fips", version = "0.0.6-18a778db501d455f8a1b6d1e3ef8e17121661177", repo_name = "sonic_fips")
+bazel_dep(name = "libnl3", version = "3.7.0.sonic.7")
+
+single_version_override(module_name = "rules_go", version = "0.64.1-sonic.1")
+
+gcc = use_extension("@sonic_build_infra//toolchains/gcc:extensions.bzl", "gcc")
+use_repo(gcc, "gcc_toolchains")
+register_toolchains("@gcc_toolchains//:all")
+register_toolchains("@sonic_build_infra//tools/gzip:toolchain")
+register_toolchains(
+    "@sonic_build_infra//tools/build_tools:make_toolchain",
+    "@sonic_build_infra//tools/build_tools:m4_toolchain",
+    "@sonic_build_infra//tools/build_tools:pkgconfig_toolchain",
+)
+
+# Common owns its Rust targets. Its shared extension still requires a root
+# toolchain declaration when this consumer selects only the C++ interface.
+rust = use_extension("@rules_rs//rs:rules_rust_reexported_extensions.bzl", "rust", dev_dependency = True)
+rust.toolchain(edition = "2021", versions = ["1.90.0"])
+use_repo(rust, "rust_toolchains")
+register_toolchains("@rust_toolchains//:all", dev_dependency = True)
+
+# Target ABI libraries only. SONiC Common, patched libnl and OpenSSL are built
+# by their source owners rather than taken from these Debian packages.
+apt = use_extension("@rules_distroless//apt:extensions.bzl", "apt")
+apt.import_lock(lock = "@sonic_build_infra//apt:apt.lock.json")
+use_repo(apt, "wpa_deps", "wpa_runtime", "sysroot")

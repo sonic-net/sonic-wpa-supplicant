@@ -1,0 +1,9 @@
+common --lockfile_mode=update
+common --platforms=@sonic_build_infra//platforms:x86_64_trixie
+common --host_platform=@sonic_build_infra//platforms:x86_64_trixie
+common --@sonic_swss_common//tools/bazel:yang_modules=True
+build --compilation_mode=opt
+# Reuse the registered kernel-tool cache policy for directory aliases.
+build --remote_download_regex=(^|.*/)tools/build_tools/kernel_runtime_(amd64|arm64)(/.*)?$
+test --test_output=errors
+try-import %workspace%/.bazelrc.user

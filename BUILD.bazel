@@ -1,0 +1,198 @@
+load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_gzip//gzip/compress:defs.bzl", "gzip_compress")
+load("@rules_python//python:defs.bzl", "py_test")
+load("@rules_distroless//distroless:defs.bzl", "flatten")
+load("@sonic_build_infra//tar:sonic_deploy_tar.bzl", "sonic_deploy_tar")
+load("@sonic_build_infra//binary:keep_debug_info.bzl", "keep_debug_info")
+load("@sonic_build_infra//oci:runtime_packages.bzl", "runtime_packages")
+load("//:tools/bazel/native.bzl", "wpa_binaries")
+
+package(default_visibility = ["//visibility:public"])
+
+filegroup(
+    name = "source_files",
+    srcs = glob(["src/**", "wpa_supplicant/**", "debian/**"], exclude = ["**/BUILD.bazel"]) + ["//tests:source_files"],
+)
+
+cc_library(
+    name = "private_headers",
+    hdrs = glob(["src/**/*.h", "wpa_supplicant/**/*.h"]),
+    visibility = ["//tests:__pkg__"],
+)
+
+wpa_binaries()
+filegroup(
+    name = "build",
+    srcs = [":wpa_supplicant", ":wpa_cli", ":wpa_passphrase"],
+)
+
+# New owner output paths ensure CodeQL observes real compile actions even
+# after source dependencies and the regular programs have been prepared.
+wpa_binaries(prefix = "codeql_")
+filegroup(
+    name = "codeql_build",
+    srcs = [":codeql_" + name for name in ["wpa_supplicant", "wpa_cli", "wpa_passphrase"]],
+    tags = ["manual"],
+    visibility = ["//visibility:private"],
+)
+
+# Runtime payload mappings follow debian/wpasupplicant.{install,links,docs,
+# examples,manpages} and the existing dh_install override. SONiC's merged-/usr
+# base provides /sbin -> usr/sbin and /lib -> usr/lib; the logical service paths
+# and the upstream generated units retain /sbin unchanged.
+_MANUALS = ["wpa_background.8", "wpa_cli.8", "wpa_passphrase.8", "wpa_supplicant.8", "wpa_supplicant.conf.5"]
+
+genrule(
+    name = "manuals",
+    srcs = ["wpa_supplicant/doc/docbook/" + name.rsplit(".", 1)[0] + ".sgml" for name in _MANUALS],
+    outs = ["manuals/" + name for name in _MANUALS],
+    tools = ["@sonic_build_infra//tools/build_tools:docbook2man"],
+    cmd = "root=$$PWD; tool=\"$$root/$(execpath @sonic_build_infra//tools/build_tools:docbook2man)\"; " +
+          "mkdir -p \"$(@D)/manuals\"; cd \"$(@D)/manuals\"; export SOURCE_DATE_EPOCH=1598266417; " +
+          "; ".join(["\"$$tool\" \"$$root/$(location wpa_supplicant/doc/docbook/" + name.rsplit(".", 1)[0] + ".sgml)\"" for name in _MANUALS]),
+)
+
+
+_UNITS = ["wpa_supplicant.service", "wpa_supplicant@.service", "wpa_supplicant-nl80211@.service", "wpa_supplicant-wired@.service", "fi.w1.wpa_supplicant1.service"]
+
+[
+    expand_template(
+        name = name,
+        template = "wpa_supplicant/" + ("dbus/" if name.startswith("fi.") else "systemd/") + (name.replace("@.service", ".service.arg.in") if "@" in name else name + ".in"),
+        out = "generated/" + name,
+        substitutions = {"@BINDIR@": "/sbin"},
+    )
+    for name in _UNITS
+]
+
+_DATA = {
+    "usr/sbin/wpa_action": ("debian/ifupdown/wpa_action", "0755"),
+    "etc/wpa_supplicant/action_wpa.sh": ("debian/ifupdown/action_wpa.sh", "0755"),
+    "etc/wpa_supplicant/functions.sh": ("debian/ifupdown/functions.sh", "0755"),
+    "etc/wpa_supplicant/ifupdown.sh": ("debian/ifupdown/wpasupplicant/ifupdown.sh", "0755"),
+    "etc/dbus-1/system.d/wpa_supplicant.conf": ("wpa_supplicant/dbus/dbus-wpa_supplicant.conf", "0644"),
+    "usr/share/dbus-1/system-services/fi.w1.wpa_supplicant1.service": (":fi.w1.wpa_supplicant1.service", "0644"),
+    "usr/lib/pm-utils/sleep.d/60_wpa_supplicant": ("wpa_supplicant/examples/60_wpa_supplicant", "0755"),
+    "usr/lib/NetworkManager/conf.d/no-mac-addr-change.conf": ("debian/NetworkManager/no-mac-addr-change.conf", "0644"),
+    "usr/share/doc/wpasupplicant/README.Debian": ("debian/wpasupplicant.README.Debian", "0644"),
+    "usr/share/doc/wpasupplicant/changelog.Debian": ("debian/changelog", "0644"),
+    "usr/share/doc/wpasupplicant/changelog": ("wpa_supplicant/ChangeLog", "0644"),
+    "usr/share/doc/wpasupplicant/copyright": ("debian/copyright", "0644"),
+    "usr/share/man/man8/wpa_action.8": ("debian/ifupdown/wpa_action.8", "0644"),
+} | {
+    "usr/lib/systemd/system/" + name: (":" + name, "0644")
+    for name in _UNITS if name.startswith("wpa_supplicant")
+} | {
+    "usr/share/doc/wpasupplicant/" + name: ("wpa_supplicant/" + name, "0644")
+    for name in ["README", "README-DPP", "README-HS20", "README-WPS", "README-P2P"]
+} | {
+    "usr/share/doc/wpasupplicant/examples/" + source.rsplit("/", 1)[-1]: (source, "0644")
+    for source in ["wpa_supplicant/wpa_supplicant.conf"] + glob(["wpa_supplicant/examples/*.conf", "debian/examples/*.conf"])
+} | {
+    "usr/share/man/man" + name[-1] + "/" + name: (":manuals/" + name, "0644")
+    for name in _MANUALS
+}
+
+# debian/rules retains dh_compress: manuals and changelogs are compressed,
+# as are these selected documentation/example files larger than 4 KiB.
+# Use the shared no-name gzip toolchain; no DEB command runs.
+_COMPRESSED = [path for path in _DATA if path.startswith("usr/share/man/")] + [
+    "usr/share/doc/wpasupplicant/" + name
+    for name in ["README.Debian", "README", "README-DPP", "README-HS20", "README-WPS", "README-P2P", "changelog", "changelog.Debian", "examples/wpa_supplicant.conf"]
+]
+[gzip_compress(name = "compressed_" + str(index), src = _DATA[path][0], level = 9)
+ for index, path in enumerate(_COMPRESSED)]
+_DATA = {path: value for path, value in _DATA.items() if path not in _COMPRESSED} | {
+    path + ".gz": (":compressed_" + str(index), "0644")
+    for index, path in enumerate(_COMPRESSED)
+}
+
+_LINKS = {
+    "etc/network/if-pre-up.d/wpasupplicant": "../../wpa_supplicant/ifupdown.sh",
+    "etc/network/if-up.d/wpasupplicant": "../../wpa_supplicant/ifupdown.sh",
+    "etc/network/if-down.d/wpasupplicant": "../../wpa_supplicant/ifupdown.sh",
+    "etc/network/if-post-down.d/wpasupplicant": "../../wpa_supplicant/ifupdown.sh",
+    "etc/ifplugd/action.d/action_wpa": "../../wpa_supplicant/action_wpa.sh",
+    "usr/share/doc/wpa_supplicant": "wpasupplicant",
+    "usr/share/doc/wpasupplicant/README.modes.gz": "README.Debian.gz",
+}
+
+sonic_deploy_tar(
+    name = "wpasupplicant_pkg",
+    srcs = [source for source, _ in _DATA.values()],
+    binaries = {
+        "usr/sbin/wpa_supplicant uid=0 gid=0 mode=0755 type=file": ":wpa_supplicant",
+        "usr/sbin/wpa_cli uid=0 gid=0 mode=0755 type=file": ":wpa_cli",
+        "usr/bin/wpa_passphrase uid=0 gid=0 mode=0755 type=file": ":wpa_passphrase",
+    },
+    force_debug_build = True,
+    default_mtime = "1598266417",
+    mtree = [path + " uid=0 gid=0 mode=" + mode + " type=file content=$(location " + source + ")" for path, (source, mode) in _DATA.items()] + [path + " uid=0 gid=0 mode=0777 type=link link=" + target for path, target in _LINKS.items()],
+    visibility = ["//visibility:public"],
+)
+
+runtime_packages(
+    name = "runtime_packages.json",
+    control = "debian/control",
+    changelog = "debian/changelog",
+    packages = {"wpasupplicant": ":wpasupplicant_pkg"},
+    required_paths = {"wpasupplicant": ["usr/sbin/wpa_supplicant", "usr/sbin/wpa_cli", "usr/bin/wpa_passphrase"]},
+    dependencies = ["@sonic_swss_common//:runtime_packages.json", "@sonic_fips//openssl:runtime_packages.json", "@libnl3//:runtime_packages.json"],
+    apt_packages = {"@wpa_runtime//" + package + ":data": "@wpa_runtime//" + package + ":control" for package in ["libdbus-1-3", "libpcsclite1", "libreadline8t64", "libtinfo6"]},
+)
+
+flatten(
+    name = "test_runtime",
+    testonly = True,
+    deduplicate = True,
+    tars = ["@wpa_runtime//:flat", "@sonic_swss_common//tools/bazel/runtime:test_runtime"],
+)
+
+_OWNER_TARS = [
+    "@sonic_swss_common//:libswsscommon_pkg",
+    "@sonic_fips//openssl:libssl3t64_pkg",
+    "@libnl3//:libnl-3-runtime_files",
+    "@libnl3//:libnl-genl-3-runtime_files",
+    "@libnl3//:libnl-route-3-runtime_files",
+]
+# Inspect the same configured binaries that the runtime TAR packages.
+[
+    keep_debug_info(
+        name = "packaged_" + name,
+        src = ":" + name,
+        testonly = True,
+        visibility = ["//visibility:private"],
+    )
+    for name in ["wpa_supplicant", "wpa_cli", "wpa_passphrase"]
+]
+_PACKAGE_INPUTS = [
+    ":wpasupplicant_pkg", ":wpasupplicant_pkg.debug_symbols", "debian/control",
+    ":test_runtime",
+    "@sonic_swss_common//tools/bazel/runtime:run_with_runtime.py",
+] + [":" + name for name in _UNITS] + [":packaged_" + name for name in ["wpa_supplicant", "wpa_cli", "wpa_passphrase"]] + [":manuals/" + name for name in _MANUALS] + _OWNER_TARS
+py_test(
+    name = "package_test",
+    srcs = ["tools/bazel/package_test.py"],
+    main = "tools/bazel/package_test.py",
+    args = ["$(location " + label + ")" for label in _PACKAGE_INPUTS],
+    data = _PACKAGE_INPUTS + [":source_files"],
+    deps = ["@sonic_fips//openssl:package_test_utils"],
+    timeout = "long",
+    target_compatible_with = ["@platforms//cpu:x86_64", "@platforms//os:linux", "@sonic_build_infra//platforms:trixie"],
+)
+
+# These self-contained programs are the maintained upstream run-tests suite
+# plus base64 and RC4 vectors. HTTPS/X.509 tools have compile-only coverage.
+_UPSTREAM_PROGRAMS = ["test-aes", "test-base64", "test-list", "test-md4", "test-milenage", "test-rc4", "test-rsa-sig-ver", "test-sha1", "test-sha256", "test-x509v3", "test-https", "test-https_server"]
+[alias(name = name, actual = "//tests:" + name, testonly = True) for name in _UPSTREAM_PROGRAMS]
+filegroup(name = "upstream_tests_build", testonly = True, srcs = [":" + name for name in _UPSTREAM_PROGRAMS])
+py_test(
+    name = "upstream_test",
+    srcs = ["tools/bazel/upstream_test.py"],
+    main = "tools/bazel/upstream_test.py",
+    args = ["$(location :" + name + ")" for name in _UPSTREAM_PROGRAMS[:9]],
+    data = [":" + name for name in _UPSTREAM_PROGRAMS],
+    timeout = "long",
+    target_compatible_with = ["@platforms//cpu:x86_64", "@platforms//os:linux", "@sonic_build_infra//platforms:trixie"],
+)
