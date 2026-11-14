@@ -1,0 +1,87 @@
+name: Bazel WPA
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    name: WPA source and installed TARs (AMD64)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    container: debian:trixie-20260918@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c
+    env:
+      DEBIAN_FRONTEND: noninteractive
+      BAZELISK_GITHUB_TOKEN: ""
+      CI_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install execution and acceptance tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends binutils build-essential ca-certificates curl gdb git patch pkg-config python3 tar unzip xz-utils zstd
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
+        with:
+          bazelisk-version: 1.29.0
+          bazelisk-cache: true
+          repository-cache: true
+          disk-cache: wpa-source-amd64
+          cache-version: "8.5.1"
+      - name: Preserve setup caches in the native source configuration
+        run: |
+          test "$(uname -m)" = x86_64
+          test "$(. /etc/os-release; echo "$VERSION_CODENAME")" = trixie
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          downloader_config="$(mktemp "$RUNNER_TEMP/wpa-downloader.XXXXXX")"
+          curl --fail --location --retry 3 \
+            https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/97cc502556b7ec3435d2d67b105315bcc18bb47e/ci/source_mirrors.cfg \
+            --output "$downloader_config"
+          printf '%s  %s\n' ddd6f40504a30e138a62be0d728e1a352391d0f781c927eaf4ea45c44d8a0720 "$downloader_config" | sha256sum --check --status
+          printf 'common --experimental_downloader_config="%s"\n' "$downloader_config" >> .bazelrc.user
+          python3 - <<'PY'
+          from pathlib import Path
+          home = Path.home() / '.bazelrc'
+          with Path('.bazelrc.user').open('a') as output:
+              if home.exists():
+                  for line in home.read_text().splitlines():
+                      if line.startswith(('build --disk_cache=', 'common --repository_cache=')):
+                          print(line, file=output)
+          PY
+      - name: Verify shallow checkout provenance
+        run: python3 tools/bazel/source_identity_test.py
+      - name: Reject DEB-producing actions before source execution
+        run: python3 tools/bazel/validate.py audit
+      - name: Build runtime and symbols and run upstream and installed tests
+        run: python3 tools/bazel/validate.py build
+      - name: Verify no-op, source edit and exact restoration
+        run: python3 tools/bazel/validate.py incremental
+      - name: Retain public artifacts and source test results
+        run: |
+          python3 tools/bazel/validate.py collect
+          git diff --exit-code HEAD
+      - name: Upload accepted runtime and debug artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sonic-wpa-supplicant-amd64
+          path: |
+            bazel-evidence/*.tar
+            bazel-evidence/*.tar.gz
+            bazel-evidence/*.json
+            bazel-evidence/resolved-modules.txt
+            bazel-evidence/*-repository.txt
+            bazel-evidence/MODULE.bazel.lock
+            bazel-evidence/tests/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 1

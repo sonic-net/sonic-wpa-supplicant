@@ -1,0 +1,323 @@
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_static_library.bzl", "cc_static_library")
+load("//:tools/bazel/native.bzl", "WPA_INCLUDE_COPTS")
+
+package(default_visibility = ["//:__pkg__"])
+
+filegroup(
+    name = "source_files",
+    srcs = glob(["**"], exclude = ["BUILD.bazel"]),
+)
+
+# Preserve the fixed WPA flags and the tests/Makefile configuration inherited
+# by upstream library builds. Bazel owns dependency-file generation. Disabling
+# the toolchain-added extra warnings matches the existing frontend filter.
+_TEST_COPTS = WPA_INCLUDE_COPTS + [
+    "-O2",
+    "-g",
+    "-Wall",
+    "-Wno-extra",
+    "-U_FORTIFY_SOURCE",
+    "-D_FORTIFY_SOURCE=3",
+    "-fstack-protector-strong",
+    "-Wformat",
+    "-Werror=format-security",
+    "-Wno-error=array-bounds",
+    "-Wno-deprecated-declarations",
+    "-Wno-use-after-free",
+    "-Wno-discarded-qualifiers",
+    "-DCONFIG_IEEE80211R_AP",
+    "-DCONFIG_IEEE80211R",
+    "-DCONFIG_TDLS",
+]
+
+_TEST_LINKOPTS = [
+    "-Wl,--as-needed",
+    "-Wl,-z,relro",
+    "-Wl,-z,now",
+    "-lrt",
+]
+
+_SUPPORTED_PLATFORM = [
+    "@platforms//cpu:x86_64",
+    "@platforms//os:linux",
+    "@sonic_build_infra//platforms:trixie",
+]
+
+# Source list and additional flags from src/utils/Makefile.
+cc_library(
+    name = "utils",
+    testonly = True,
+    srcs = [
+        "//:src/utils/base64.c",
+        "//:src/utils/bitfield.c",
+        "//:src/utils/common.c",
+        "//:src/utils/crc32.c",
+        "//:src/utils/ip_addr.c",
+        "//:src/utils/json.c",
+        "//:src/utils/radiotap.c",
+        "//:src/utils/trace.c",
+        "//:src/utils/uuid.c",
+        "//:src/utils/wpa_debug.c",
+        "//:src/utils/wpabuf.c",
+        "//:src/utils/os_unix.c",
+        "//:src/utils/eloop.c",
+        "//:src/utils/edit.c",
+    ],
+    copts = _TEST_COPTS + [
+        "-DCONFIG_IPV6",
+        "-DCONFIG_DEBUG_FILE",
+        "-fPIC",
+    ],
+    target_compatible_with = _SUPPORTED_PLATFORM,
+    deps = ["//:private_headers"],
+)
+
+# Source list and additional flags from src/crypto/Makefile.
+cc_library(
+    name = "crypto",
+    testonly = True,
+    srcs = [
+        "//:src/crypto/aes-cbc.c",
+        "//:src/crypto/aes-ccm.c",
+        "//:src/crypto/aes-ctr.c",
+        "//:src/crypto/aes-eax.c",
+        "//:src/crypto/aes-encblock.c",
+        "//:src/crypto/aes-gcm.c",
+        "//:src/crypto/aes-internal.c",
+        "//:src/crypto/aes-internal-dec.c",
+        "//:src/crypto/aes-internal-enc.c",
+        "//:src/crypto/aes-omac1.c",
+        "//:src/crypto/aes-siv.c",
+        "//:src/crypto/aes-unwrap.c",
+        "//:src/crypto/aes-wrap.c",
+        "//:src/crypto/des-internal.c",
+        "//:src/crypto/dh_group5.c",
+        "//:src/crypto/dh_groups.c",
+        "//:src/crypto/md4-internal.c",
+        "//:src/crypto/md5.c",
+        "//:src/crypto/md5-internal.c",
+        "//:src/crypto/milenage.c",
+        "//:src/crypto/ms_funcs.c",
+        "//:src/crypto/rc4.c",
+        "//:src/crypto/sha1.c",
+        "//:src/crypto/sha1-internal.c",
+        "//:src/crypto/sha1-pbkdf2.c",
+        "//:src/crypto/sha1-prf.c",
+        "//:src/crypto/sha1-tlsprf.c",
+        "//:src/crypto/sha1-tprf.c",
+        "//:src/crypto/sha256.c",
+        "//:src/crypto/sha256-prf.c",
+        "//:src/crypto/sha256-tlsprf.c",
+        "//:src/crypto/sha256-internal.c",
+        "//:src/crypto/sha384.c",
+        "//:src/crypto/sha384-prf.c",
+        "//:src/crypto/sha384-internal.c",
+        "//:src/crypto/sha512.c",
+        "//:src/crypto/sha512-prf.c",
+        "//:src/crypto/sha512-internal.c",
+        "//:src/crypto/crypto_internal.c",
+        "//:src/crypto/crypto_internal-cipher.c",
+        "//:src/crypto/crypto_internal-modexp.c",
+        "//:src/crypto/crypto_internal-rsa.c",
+        "//:src/crypto/tls_internal.c",
+        "//:src/crypto/fips_prf_internal.c",
+        "//:src/crypto/random.c",
+    ],
+    copts = _TEST_COPTS + [
+        "-DCONFIG_CRYPTO_INTERNAL",
+        "-DCONFIG_TLS_INTERNAL_CLIENT",
+        "-DCONFIG_TLS_INTERNAL_SERVER",
+        "-DCONFIG_SHA256",
+        "-DCONFIG_SHA384",
+        "-DCONFIG_HMAC_SHA384_KDF",
+        "-DCONFIG_INTERNAL_SHA384",
+        "-fPIC",
+    ],
+    target_compatible_with = _SUPPORTED_PLATFORM,
+    deps = ["//:private_headers"],
+)
+
+# Source list and additional flags from src/tls/Makefile.
+cc_library(
+    name = "tls",
+    testonly = True,
+    srcs = [
+        "//:src/tls/asn1.c",
+        "//:src/tls/bignum.c",
+        "//:src/tls/pkcs1.c",
+        "//:src/tls/pkcs5.c",
+        "//:src/tls/pkcs8.c",
+        "//:src/tls/rsa.c",
+        "//:src/tls/tlsv1_client.c",
+        "//:src/tls/tlsv1_client_read.c",
+        "//:src/tls/tlsv1_client_write.c",
+        "//:src/tls/tlsv1_client_ocsp.c",
+        "//:src/tls/tlsv1_common.c",
+        "//:src/tls/tlsv1_cred.c",
+        "//:src/tls/tlsv1_record.c",
+        "//:src/tls/tlsv1_server.c",
+        "//:src/tls/tlsv1_server_read.c",
+        "//:src/tls/tlsv1_server_write.c",
+        "//:src/tls/x509v3.c",
+    ],
+    # bignum.c includes libtommath.c; it is not a separate translation unit.
+    textual_hdrs = ["//:src/tls/libtommath.c"],
+    copts = _TEST_COPTS + [
+        "-DCONFIG_INTERNAL_LIBTOMMATH",
+        "-DCONFIG_CRYPTO_INTERNAL",
+        "-DCONFIG_TLSV11",
+        "-DCONFIG_TLSV12",
+    ],
+    target_compatible_with = _SUPPORTED_PLATFORM,
+    deps = ["//:private_headers"],
+)
+
+# Upstream links crypto and TLS in --start-group: each calls into the other.
+# Merge their native object files into one archive so ordinary archive rescans
+# resolve that cycle. The original libraries retain their separate compile flags;
+# unused objects remain unlinked, as they do with the upstream archive group.
+cc_static_library(
+    name = "crypto_tls_archive",
+    testonly = True,
+    deps = [":crypto", ":tls"],
+    target_compatible_with = _SUPPORTED_PLATFORM,
+)
+
+# cc_static_library publishes an archive rather than CcInfo. A native library
+# consumes that archive and supplies the existing private header interface.
+cc_library(
+    name = "crypto_tls",
+    testonly = True,
+    srcs = [":crypto_tls_archive"],
+    deps = ["//:private_headers"],
+    target_compatible_with = _SUPPORTED_PLATFORM,
+)
+
+_TEST_DEPS = [
+    ":crypto_tls",
+    ":utils",
+]
+
+cc_binary(
+    name = "test-aes",
+    testonly = True,
+    srcs = ["test-aes.c"],
+    copts = _TEST_COPTS,
+    linkopts = _TEST_LINKOPTS,
+    target_compatible_with = _SUPPORTED_PLATFORM,
+    deps = _TEST_DEPS,
+)
+
+cc_binary(
+    name = "test-base64",
+    testonly = True,
+    srcs = ["test-base64.c"],
+    copts = _TEST_COPTS,
+    linkopts = _TEST_LINKOPTS,
+    target_compatible_with = _SUPPORTED_PLATFORM,
+    deps = _TEST_DEPS,
+)
+
+cc_binary(
+    name = "test-list",
+    testonly = True,
+    srcs = ["test-list.c"],
+    copts = _TEST_COPTS,
+    linkopts = _TEST_LINKOPTS,
+    target_compatible_with = _SUPPORTED_PLATFORM,
+    deps = _TEST_DEPS,
+)
+
+cc_binary(
+    name = "test-md4",
+    testonly = True,
+    srcs = ["test-md4.c"],
+    copts = _TEST_COPTS,
+    linkopts = _TEST_LINKOPTS,
+    target_compatible_with = _SUPPORTED_PLATFORM,
+    deps = _TEST_DEPS,
+)
+
+cc_binary(
+    name = "test-milenage",
+    testonly = True,
+    srcs = ["test-milenage.c"],
+    copts = _TEST_COPTS,
+    linkopts = _TEST_LINKOPTS,
+    target_compatible_with = _SUPPORTED_PLATFORM,
+    deps = _TEST_DEPS,
+)
+
+cc_binary(
+    name = "test-rc4",
+    testonly = True,
+    srcs = ["test-rc4.c"],
+    copts = _TEST_COPTS,
+    linkopts = _TEST_LINKOPTS,
+    target_compatible_with = _SUPPORTED_PLATFORM,
+    deps = _TEST_DEPS,
+)
+
+cc_binary(
+    name = "test-rsa-sig-ver",
+    testonly = True,
+    srcs = ["test-rsa-sig-ver.c"],
+    copts = _TEST_COPTS,
+    linkopts = _TEST_LINKOPTS,
+    target_compatible_with = _SUPPORTED_PLATFORM,
+    deps = _TEST_DEPS,
+)
+
+cc_binary(
+    name = "test-sha1",
+    testonly = True,
+    srcs = ["test-sha1.c"],
+    copts = _TEST_COPTS,
+    linkopts = _TEST_LINKOPTS,
+    target_compatible_with = _SUPPORTED_PLATFORM,
+    deps = _TEST_DEPS,
+)
+
+cc_binary(
+    name = "test-sha256",
+    testonly = True,
+    srcs = ["test-sha256.c"],
+    copts = _TEST_COPTS,
+    linkopts = _TEST_LINKOPTS,
+    target_compatible_with = _SUPPORTED_PLATFORM,
+    deps = _TEST_DEPS,
+)
+
+# These three remain compile checks: certificates or network peers are needed
+# to run them. The root upstream_test runs the other nine executable suites.
+cc_binary(
+    name = "test-x509v3",
+    testonly = True,
+    srcs = ["test-x509v3.c"],
+    copts = _TEST_COPTS,
+    linkopts = _TEST_LINKOPTS,
+    target_compatible_with = _SUPPORTED_PLATFORM,
+    deps = _TEST_DEPS,
+)
+
+cc_binary(
+    name = "test-https",
+    testonly = True,
+    srcs = ["test-https.c"],
+    copts = _TEST_COPTS,
+    linkopts = _TEST_LINKOPTS,
+    target_compatible_with = _SUPPORTED_PLATFORM,
+    deps = _TEST_DEPS,
+)
+
+cc_binary(
+    name = "test-https_server",
+    testonly = True,
+    srcs = ["test-https_server.c"],
+    copts = _TEST_COPTS,
+    linkopts = _TEST_LINKOPTS,
+    target_compatible_with = _SUPPORTED_PLATFORM,
+    deps = _TEST_DEPS,
+)
