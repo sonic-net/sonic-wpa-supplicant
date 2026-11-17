@@ -165,6 +165,10 @@ int eloop_cancel_timeout(eloop_timeout_handler handler, void *eloop_data,
 			 void *user_data)
 { (void) handler; (void) eloop_data; (void) user_data; return 0; }
 
+int eloop_is_timeout_registered(eloop_timeout_handler handler,
+				void *eloop_data, void *user_data)
+{ (void) handler; (void) eloop_data; (void) user_data; return 0; }
+
 struct l2_packet_data * l2_packet_init(
 	const char *ifname, const u8 *own_addr, unsigned short protocol,
 	void (*rx_callback)(void *ctx, const u8 *src_addr, const u8 *buf,
@@ -305,6 +309,10 @@ void ieee802_1x_cp_connect_authenticated(void *cp_ctx)
 { (void) cp_ctx; }
 void ieee802_1x_cp_connect_secure(void *cp_ctx)
 { (void) cp_ctx; }
+void ieee802_1x_cp_abandon_latest_sak(void *cp_ctx)
+{ (void) cp_ctx; }
+void ieee802_1x_cp_set_all_transmitting(void *cp_ctx, bool status)
+{ (void) cp_ctx; (void) status; }
 void ieee802_1x_cp_set_allreceiving(void *cp_ctx, bool status)
 { (void) cp_ctx; (void) status; }
 void ieee802_1x_cp_set_ciphersuite(void *cp_ctx, u64 cs)

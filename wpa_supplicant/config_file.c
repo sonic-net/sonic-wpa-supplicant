@@ -901,6 +901,8 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 	INT(macsec_policy);
 	write_mka_cak(f, ssid);
 	write_mka_ckn(f, ssid);
+	STR(mka_cak_fallback);
+	STR(mka_ckn_fallback);
 	INT(macsec_integ_only);
 	INT(macsec_ciphersuite);
 	INT_DEF(mka_rekey_period, 0);
