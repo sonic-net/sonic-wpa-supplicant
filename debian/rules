@@ -26,7 +26,7 @@ DEB_CFLAGS_MAINT_APPEND   = -MMD -Wall $(CPPFLAGS) $(FORTIFY3_FLAGS) -Wno-error=
                                       -Wno-use-after-free $(warning WARNING: Building with -Wno-use-after-free)       \
                                       -Wno-discarded-qualifiers $(warning WARNING: Building with -Wno-discarded-qualifiers)
 DEB_CXXFLAGS_MAINT_APPEND = $(CPPFLAGS) $(FORTIFY3_FLAGS)
-DEB_LDFLAGS_MAINT_APPEND  = -Wl,--as-needed
+DEB_LDFLAGS_MAINT_APPEND  = -Wl,--as-needed -Wl,-z,noexecstack
 export DEB_CFLAGS_MAINT_APPEND DEB_CXXFLAGS_MAINT_APPEND DEB_LDFLAGS_MAINT_APPEND
 
 UCFLAGS   = -MMD -Wall -fPIC $(CPPFLAGS) $(CFLAGS) $(FORTIFY3_FLAGS)
