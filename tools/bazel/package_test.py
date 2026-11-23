@@ -131,13 +131,17 @@ def main():
             program = subprocess.check_output(["readelf", "-lW", binary], text=True)
             assert "BIND_NOW" in dynamic and "GNU_RELRO" in program, name
             assert re.search(r"GNU_STACK\s+.*\sRW\s", program), name
-            check_symbols(binary, symbols, work, prefix_mapped=True)
+            check_symbols(binary, symbols, work)
             check_gdb(binary, symbols, "main", {"wpa_supplicant": "main.c", "wpa_cli": "wpa_cli.c", "wpa_passphrase": "wpa_passphrase.c"}[binary.name])
         check_gdb(root / "usr/sbin/wpa_supplicant", symbols, "sonic_db_set", "sonic_operators.cpp")
         debug_files = [m for m in debug_entries.values() if m.isfile()]
         assert len(debug_files) == 3
         for member in debug_files:
             assert (member.mode, member.uid, member.gid) == (0o644, 0, 0), (member.name, member.mode)
+            strings = subprocess.check_output([
+                "readelf", "--decompress", "-p", ".debug_line_str", "-p", ".debug_str", symbols / member.name,
+            ])
+            assert b".debug_str" in strings and b"/execroot/" not in strings, member.name
 
         # Reuse Common's confined Debian-link extraction. APT dependencies are
         # staged first; source owners then provide the exact selected libraries.

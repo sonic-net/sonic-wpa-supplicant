@@ -108,14 +108,14 @@ def main():
 
     def resolved_inputs():
         graph = bazel("mod", "graph")
-        require("sonic-build-infra@0.0.37-316e298e77ab5cfa69af9b0c05ec24d5d94bbe1e" in graph,
+        require("sonic-build-infra@0.0.44-35726399908a3beb947174e9359f902077928289" in graph,
                 "Selected shared tooling version differs from the reviewed source")
         infra = bazel("mod", "show_repo", "@sonic_build_infra")
-        require("http_archive(" in infra and "316e298e77ab5cfa69af9b0c05ec24d5d94bbe1e" in infra
-                and "sha256-4zHMIqk2ZBH4tgCJAgqdHd5TeiT9XMPrXMXCk3+SgEk=" in infra,
+        require("http_archive(" in infra and "35726399908a3beb947174e9359f902077928289" in infra
+                and "sha256-TDuwpQBfKHhNAvpMUmDuHFUtntv2PAnfbgeQ7GuSFNc=" in infra,
                 "Actual tooling source is not the reviewed immutable archive; local overrides are not acceptance")
         libnl = bazel("mod", "show_repo", "@libnl3")
-        require("libnl3@3.7.0.sonic.7" in graph and "http_archive(" in libnl
+        require("libnl3@3.7.0.sonic.10" in graph and "http_archive(" in libnl
                 and "0001-build-libnl3-with-shared-native-rules.patch" in libnl
                 and "0002-match-shared-output-sonames.patch" in libnl,
                 "Actual libnl repository lacks the reviewed owner interface")
@@ -125,9 +125,9 @@ def main():
                 and "sha256-MX76U2Z8y01QmyNoO2ZVqIXvpWySdJuyovJ/unKqzuc=" in common,
                 "Common differs from the registered owner source")
         fips = bazel("mod", "show_repo", "@sonic_fips")
-        require("sonic-fips@0.0.6-18a778db501d455f8a1b6d1e3ef8e17121661177" in graph
-                and "http_archive(" in fips and "18a778db501d455f8a1b6d1e3ef8e17121661177" in fips
-                and "sha256-vzJY61s9LR7vXQTgw+wtr4G5uiFmJWglig8h8PiNKRs=" in fips,
+        require("sonic-fips@0.0.6-1a8daf8dd8a3ad54de0e91a55b46fd5bbd206763" in graph
+                and "http_archive(" in fips and "1a8daf8dd8a3ad54de0e91a55b46fd5bbd206763" in fips
+                and "sha256-PYGH1QeZW/7xDR27OZBs1uBxUfdcHkSYgAwLaU9eaI4=" in fips,
                 "OpenSSL differs from the registered owner source")
         (output / "fips-repository.txt").write_text(fips)
         (output / "common-repository.txt").write_text(common)
@@ -282,7 +282,7 @@ def main():
         record = {**identity, "architecture": "amd64", "artifacts": snapshot(files),
                   "resolved_inputs": json.loads((output / "resolved-inputs.json").read_text()),
                   "registry": "https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/main",
-                  "infra_source": "316e298e77ab5cfa69af9b0c05ec24d5d94bbe1e"}
+                  "infra_source": "35726399908a3beb947174e9359f902077928289"}
         (output / "provenance.json").write_text(json.dumps(record, indent=2) + "\n")
 
 

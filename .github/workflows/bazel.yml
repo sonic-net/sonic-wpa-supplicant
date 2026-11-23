@@ -45,9 +45,9 @@ jobs:
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           downloader_config="$(mktemp "$RUNNER_TEMP/wpa-downloader.XXXXXX")"
           curl --fail --location --retry 3 \
-            https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/97cc502556b7ec3435d2d67b105315bcc18bb47e/ci/source_mirrors.cfg \
+            https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/b5907cdbdf6489f248cdd79eb4c6e2fdf7445eb9/ci/source_mirrors.cfg \
             --output "$downloader_config"
-          printf '%s  %s\n' ddd6f40504a30e138a62be0d728e1a352391d0f781c927eaf4ea45c44d8a0720 "$downloader_config" | sha256sum --check --status
+          printf '%s  %s\n' c28e6882aa9ebed84fd32586112e5fbfe9684af4e4aaa9942170919a3cbd308e "$downloader_config" | sha256sum --check --status
           printf 'common --experimental_downloader_config="%s"\n' "$downloader_config" >> .bazelrc.user
           python3 - <<'PY'
           from pathlib import Path
