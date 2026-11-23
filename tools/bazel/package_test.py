@@ -14,7 +14,7 @@ import tarfile
 import tempfile
 import time
 
-from openssl.package_test import check_gdb, check_symbols, unpack_files
+from tools.bazel.package_test_utils import check_gdb, check_symbols, unpack_files
 
 BINARIES = {"usr/sbin/wpa_supplicant", "usr/sbin/wpa_cli", "usr/bin/wpa_passphrase"}
 EPOCH = 1598266417
