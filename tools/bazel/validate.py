@@ -125,9 +125,9 @@ def main():
                 and "sha256-MX76U2Z8y01QmyNoO2ZVqIXvpWySdJuyovJ/unKqzuc=" in common,
                 "Common differs from the registered owner source")
         fips = bazel("mod", "show_repo", "@sonic_fips")
-        require("sonic-fips@0.0.6-1a8daf8dd8a3ad54de0e91a55b46fd5bbd206763" in graph
-                and "http_archive(" in fips and "1a8daf8dd8a3ad54de0e91a55b46fd5bbd206763" in fips
-                and "sha256-PYGH1QeZW/7xDR27OZBs1uBxUfdcHkSYgAwLaU9eaI4=" in fips,
+        require("sonic-fips@1.11.0-2ed0920f2fea7940f4b2b7f5c37e51e225eb1ea6" in graph
+                and "http_archive(" in fips and "2ed0920f2fea7940f4b2b7f5c37e51e225eb1ea6" in fips
+                and "sha256-smFV+qIaawuRoUGTeZRdZCXpQN9jezYB4EvyBwffEWE=" in fips,
                 "OpenSSL differs from the registered owner source")
         (output / "fips-repository.txt").write_text(fips)
         (output / "common-repository.txt").write_text(common)

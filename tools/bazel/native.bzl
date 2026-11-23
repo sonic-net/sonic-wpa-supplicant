@@ -386,7 +386,8 @@ def wpa_binaries(prefix = ""):
         deps = [
             ":private_headers",
             ":" + prefix + "sonic_operators",
-            "@sonic_fips//openssl:build",
+            "@sonic_fips//openssl:libcrypto",
+            "@sonic_fips//openssl:libssl",
             "@libnl3//:libnl_3",
             "@libnl3//:libnl_genl_3",
             "@libnl3//:libnl_route_3",
@@ -446,7 +447,7 @@ def wpa_binaries(prefix = ""):
         ],
         deps = [
             ":private_headers",
-            "@sonic_fips//openssl:build",
+            "@sonic_fips//openssl:libcrypto",
         ],
         target_compatible_with = ["@platforms//cpu:x86_64", "@platforms//os:linux", "@sonic_build_infra//platforms:trixie"],
         tags = ["manual"] if prefix else [],

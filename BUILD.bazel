@@ -151,7 +151,7 @@ flatten(
 
 _OWNER_TARS = [
     "@sonic_swss_common//:libswsscommon_pkg",
-    "@sonic_fips//openssl:libssl3t64_pkg",
+    "@sonic_fips//openssl:libssl3t64.runtime",
     "@libnl3//:libnl-3-runtime_files",
     "@libnl3//:libnl-genl-3-runtime_files",
     "@libnl3//:libnl-route-3-runtime_files",
@@ -173,11 +173,10 @@ _PACKAGE_INPUTS = [
 ] + [":" + name for name in _UNITS] + [":packaged_" + name for name in ["wpa_supplicant", "wpa_cli", "wpa_passphrase"]] + [":manuals/" + name for name in _MANUALS] + _OWNER_TARS
 py_test(
     name = "package_test",
-    srcs = ["tools/bazel/package_test.py"],
+    srcs = ["tools/bazel/package_test.py", "tools/bazel/package_test_utils.py"],
     main = "tools/bazel/package_test.py",
     args = ["$(location " + label + ")" for label in _PACKAGE_INPUTS],
     data = _PACKAGE_INPUTS + [":source_files"],
-    deps = ["@sonic_fips//openssl:package_test_utils"],
     timeout = "long",
     target_compatible_with = ["@platforms//cpu:x86_64", "@platforms//os:linux", "@sonic_build_infra//platforms:trixie"],
 )
