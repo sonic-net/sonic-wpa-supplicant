@@ -120,7 +120,7 @@ def main():
                 and "0002-match-shared-output-sonames.patch" in libnl,
                 "Actual libnl repository lacks the reviewed owner interface")
         common = bazel("mod", "show_repo", "@sonic_swss_common")
-        require("sonic-swss-common@0.0.9-334389eae54afd1f4f5ee69f89c3a7ad2062ee61" in graph
+        require("sonic-swss-common@0.0.8-2a4ddd070edb719f2e969a880a5cfff711e64e72" in graph
                 and "http_archive(" in common and "334389eae54afd1f4f5ee69f89c3a7ad2062ee61" in common
                 and "sha256-MX76U2Z8y01QmyNoO2ZVqIXvpWySdJuyovJ/unKqzuc=" in common,
                 "Common differs from the registered owner source")
@@ -281,7 +281,7 @@ def main():
         revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
         record = {**identity, "architecture": "amd64", "artifacts": snapshot(files),
                   "resolved_inputs": json.loads((output / "resolved-inputs.json").read_text()),
-                  "registry": "https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/main",
+                  "registry": "https://raw.githubusercontent.com/sonic-net/sonic-bazel-registry/main",
                   "infra_source": "35726399908a3beb947174e9359f902077928289"}
         (output / "provenance.json").write_text(json.dumps(record, indent=2) + "\n")
 
