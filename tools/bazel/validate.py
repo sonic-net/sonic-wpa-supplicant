@@ -121,8 +121,8 @@ def main():
                 "Actual libnl repository lacks the reviewed owner interface")
         common = bazel("mod", "show_repo", "@sonic_swss_common")
         require("sonic-swss-common@0.0.8-2a4ddd070edb719f2e969a880a5cfff711e64e72" in graph
-                and "http_archive(" in common and "334389eae54afd1f4f5ee69f89c3a7ad2062ee61" in common
-                and "sha256-MX76U2Z8y01QmyNoO2ZVqIXvpWySdJuyovJ/unKqzuc=" in common,
+                and "http_archive(" in common and "2a4ddd070edb719f2e969a880a5cfff711e64e72" in common
+                and "sha256-Bi3nkgbIWBIOdmTd2b/erRW73UEqFpxLuS7Okh7o5YU=" in common,
                 "Common differs from the registered owner source")
         fips = bazel("mod", "show_repo", "@sonic_fips")
         require("sonic-fips@1.11.0-2ed0920f2fea7940f4b2b7f5c37e51e225eb1ea6" in graph
