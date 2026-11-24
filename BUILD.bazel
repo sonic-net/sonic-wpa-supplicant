@@ -21,6 +21,8 @@ cc_library(
     visibility = ["//tests:__pkg__"],
 )
 
+exports_files(["src/pae/ieee802_1x_cp.c"], visibility = ["//tests:__pkg__"])
+
 wpa_binaries()
 filegroup(
     name = "build",
@@ -183,14 +185,15 @@ py_test(
 
 # These self-contained programs are the maintained upstream run-tests suite
 # plus base64 and RC4 vectors. HTTPS/X.509 tools have compile-only coverage.
-_UPSTREAM_PROGRAMS = ["test-aes", "test-base64", "test-list", "test-md4", "test-milenage", "test-rc4", "test-rsa-sig-ver", "test-sha1", "test-sha256", "test-x509v3", "test-https", "test-https_server"]
+_RUN_TESTS = ["test-aes", "test-base64", "test-list", "test-macsec_cp_wedge", "test-md4", "test-milenage", "test-rc4", "test-rsa-sig-ver", "test-sha1", "test-sha256"]
+_UPSTREAM_PROGRAMS = _RUN_TESTS + ["test-x509v3", "test-https", "test-https_server"]
 [alias(name = name, actual = "//tests:" + name, testonly = True) for name in _UPSTREAM_PROGRAMS]
 filegroup(name = "upstream_tests_build", testonly = True, srcs = [":" + name for name in _UPSTREAM_PROGRAMS])
 py_test(
     name = "upstream_test",
     srcs = ["tools/bazel/upstream_test.py"],
     main = "tools/bazel/upstream_test.py",
-    args = ["$(location :" + name + ")" for name in _UPSTREAM_PROGRAMS[:9]],
+    args = ["$(location :" + name + ")" for name in _RUN_TESTS],
     data = [":" + name for name in _UPSTREAM_PROGRAMS],
     timeout = "long",
     target_compatible_with = ["@platforms//cpu:x86_64", "@platforms//os:linux", "@sonic_build_infra//platforms:trixie"],
