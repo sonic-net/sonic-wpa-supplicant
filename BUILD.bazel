@@ -177,6 +177,7 @@ py_test(
     name = "package_test",
     srcs = ["tools/bazel/package_test.py", "tools/bazel/package_test_utils.py"],
     main = "tools/bazel/package_test.py",
+    imports = ["tools/bazel"],
     args = ["$(location " + label + ")" for label in _PACKAGE_INPUTS],
     data = _PACKAGE_INPUTS + [":source_files"],
     timeout = "long",
