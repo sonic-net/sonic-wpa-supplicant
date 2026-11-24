@@ -6,10 +6,10 @@ import subprocess
 import sys
 import tempfile
 
-# These are the seven programs run by tests/Makefile's maintained run-tests.
+# These include the programs run by tests/Makefile's maintained run-tests.
 # The remaining upstream tools need external TLS/X.509 fixtures and are built
 # as compile coverage only. Base64/RC4 have self-contained test vectors too.
-EXPECTED = {"test-aes", "test-base64", "test-list", "test-md4", "test-milenage", "test-rc4", "test-rsa-sig-ver", "test-sha1", "test-sha256"}
+EXPECTED = {"test-aes", "test-base64", "test-list", "test-macsec_cp_wedge", "test-md4", "test-milenage", "test-rc4", "test-rsa-sig-ver", "test-sha1", "test-sha256"}
 
 
 def main():

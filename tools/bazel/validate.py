@@ -120,9 +120,9 @@ def main():
                 and "0002-match-shared-output-sonames.patch" in libnl,
                 "Actual libnl repository lacks the reviewed owner interface")
         common = bazel("mod", "show_repo", "@sonic_swss_common")
-        require("sonic-swss-common@0.0.9-334389eae54afd1f4f5ee69f89c3a7ad2062ee61" in graph
-                and "http_archive(" in common and "334389eae54afd1f4f5ee69f89c3a7ad2062ee61" in common
-                and "sha256-MX76U2Z8y01QmyNoO2ZVqIXvpWySdJuyovJ/unKqzuc=" in common,
+        require("sonic-swss-common@0.0.8-2a4ddd070edb719f2e969a880a5cfff711e64e72" in graph
+                and "http_archive(" in common and "2a4ddd070edb719f2e969a880a5cfff711e64e72" in common
+                and "sha256-Bi3nkgbIWBIOdmTd2b/erRW73UEqFpxLuS7Okh7o5YU=" in common,
                 "Common differs from the registered owner source")
         fips = bazel("mod", "show_repo", "@sonic_fips")
         require("sonic-fips@1.11.0-2ed0920f2fea7940f4b2b7f5c37e51e225eb1ea6" in graph
@@ -213,7 +213,7 @@ def main():
                 require(len(compiled.get(label, set())) == count, "Native source coverage differs: " + label)
         test_counts = {"utils": 14, "crypto": 45, "tls": 17}
         test_counts.update({name: 1 for name in [
-            "test-aes", "test-base64", "test-list", "test-md4", "test-milenage", "test-rc4",
+            "test-aes", "test-base64", "test-list", "test-macsec_cp_wedge", "test-md4", "test-milenage", "test-rc4",
             "test-rsa-sig-ver", "test-sha1", "test-sha256", "test-x509v3", "test-https", "test-https_server",
         ]})
         for name, count in test_counts.items():
@@ -281,7 +281,7 @@ def main():
         revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
         record = {**identity, "architecture": "amd64", "artifacts": snapshot(files),
                   "resolved_inputs": json.loads((output / "resolved-inputs.json").read_text()),
-                  "registry": "https://raw.githubusercontent.com/securely1g/sonic-bazel-registry/main",
+                  "registry": "https://raw.githubusercontent.com/sonic-net/sonic-bazel-registry/main",
                   "infra_source": "35726399908a3beb947174e9359f902077928289"}
         (output / "provenance.json").write_text(json.dumps(record, indent=2) + "\n")
 
