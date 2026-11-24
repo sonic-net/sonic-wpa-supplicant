@@ -213,7 +213,7 @@ def main():
                 require(len(compiled.get(label, set())) == count, "Native source coverage differs: " + label)
         test_counts = {"utils": 14, "crypto": 45, "tls": 17}
         test_counts.update({name: 1 for name in [
-            "test-aes", "test-base64", "test-list", "test-md4", "test-milenage", "test-rc4",
+            "test-aes", "test-base64", "test-list", "test-macsec_cp_wedge", "test-md4", "test-milenage", "test-rc4",
             "test-rsa-sig-ver", "test-sha1", "test-sha256", "test-x509v3", "test-https", "test-https_server",
         ]})
         for name, count in test_counts.items():

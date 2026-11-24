@@ -200,6 +200,24 @@ _TEST_DEPS = [
     ":utils",
 ]
 
+# This upstream driver includes the implementation to replace its external
+# state-machine dependencies. Declare it as a textual input to that compile.
+cc_library(
+    name = "macsec_cp_test_source",
+    testonly = True,
+    textual_hdrs = ["//:src/pae/ieee802_1x_cp.c"],
+    deps = ["//:private_headers"],
+)
+
+cc_binary(
+    name = "test-macsec_cp_wedge",
+    testonly = True,
+    srcs = ["test-macsec_cp_wedge.c"],
+    copts = _TEST_COPTS,
+    target_compatible_with = _SUPPORTED_PLATFORM,
+    deps = [":macsec_cp_test_source"],
+)
+
 cc_binary(
     name = "test-aes",
     testonly = True,
