@@ -1,0 +1,21 @@
+name: MACsec CP unit test
+
+# Hermetic MACsec CP state-machine unit test: #includes the CP module with
+# stubbed deps, so it needs only a C compiler. (The other tests/ binaries
+# need the full wpa build and are not run here.)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  macsec-cp-wedge-ut:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+
+      - name: Build the MACsec CP wedge unit test
+        run: make -C tests test-macsec_cp_wedge
+
+      - name: Run the MACsec CP wedge unit test
+        run: ./tests/test-macsec_cp_wedge
