@@ -147,7 +147,10 @@ def main():
         # staged first; source owners then provide the exact selected libraries.
         for archive in [dependencies, *owner_tars]:
             with tarfile.open(archive) as payload:
-                payload.extractall(root, filter=common_runtime.runtime_member_filter)
+                # Normalize Debian links as each member is read, then apply the
+                # standard data filter at the point of extraction.
+                members = (common_runtime.runtime_member_filter(member, root) for member in payload)
+                payload.extractall(root, members=filter(None, members), filter="data")
         owners = {}
         for archive in owner_tars:
             with tarfile.open(archive) as payload:
