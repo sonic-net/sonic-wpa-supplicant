@@ -71,7 +71,7 @@ jobs:
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           downloader_config="$(mktemp "$RUNNER_TEMP/wpa-downloader.XXXXXX")"
           curl --fail --location --retry 3 \
-            https://raw.githubusercontent.com/sonic-net/sonic-bazel-registry/e73724fb0134430da236e501e0770fe4d273782b/ci/source_mirrors.cfg \
+            https://raw.githubusercontent.com/sonic-net/sonic-bazel-registry/55c38af2284155eee8c7bf2481e719ec23fa2695/ci/source_mirrors.cfg \
             --output "$downloader_config"
           printf '%s  %s\n' c28e6882aa9ebed84fd32586112e5fbfe9684af4e4aaa9942170919a3cbd308e "$downloader_config" | sha256sum --check --status
           printf 'common --experimental_downloader_config="%s"\n' "$downloader_config" >> .bazelrc.user
