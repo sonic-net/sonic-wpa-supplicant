@@ -108,11 +108,11 @@ def main():
 
     def resolved_inputs():
         graph = bazel("mod", "graph")
-        require("sonic-build-infra@0.0.44-35726399908a3beb947174e9359f902077928289" in graph,
+        require("sonic-build-infra@0.0.45-77ef625a4ddafc8cdc15f3cc6aee31eabac8a5de" in graph,
                 "Selected shared tooling version differs from the reviewed source")
         infra = bazel("mod", "show_repo", "@sonic_build_infra")
-        require("http_archive(" in infra and "35726399908a3beb947174e9359f902077928289" in infra
-                and "sha256-TDuwpQBfKHhNAvpMUmDuHFUtntv2PAnfbgeQ7GuSFNc=" in infra,
+        require("http_archive(" in infra and "77ef625a4ddafc8cdc15f3cc6aee31eabac8a5de" in infra
+                and "sha256-D+wwlV4qphdP9c8K2ynlEB7CxzG5+3an1f4SKFPaHvc=" in infra,
                 "Actual tooling source is not the reviewed immutable archive; local overrides are not acceptance")
         libnl = bazel("mod", "show_repo", "@libnl3")
         require("libnl3@3.7.0.sonic.10" in graph and "http_archive(" in libnl
@@ -282,7 +282,7 @@ def main():
         record = {**identity, "architecture": "amd64", "artifacts": snapshot(files),
                   "resolved_inputs": json.loads((output / "resolved-inputs.json").read_text()),
                   "registry": "https://raw.githubusercontent.com/sonic-net/sonic-bazel-registry/main",
-                  "infra_source": "35726399908a3beb947174e9359f902077928289"}
+                  "infra_source": "77ef625a4ddafc8cdc15f3cc6aee31eabac8a5de"}
         (output / "provenance.json").write_text(json.dumps(record, indent=2) + "\n")
 
 
