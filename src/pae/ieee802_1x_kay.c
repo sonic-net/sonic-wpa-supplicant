@@ -5011,81 +5011,67 @@ int ieee802_1x_kay_get_status(struct ieee802_1x_kay *kay, char *buf,
  * information will be truncated to fit the buffer.
  */
 int ieee802_1x_kay_get_macsec(struct ieee802_1x_kay *kay, char *buf,
-			      size_t buflen)
+			         size_t buflen)
 {
 	struct transmit_sa *txsa;
 	struct receive_sc *rxsc;
 	struct receive_sa *rxsa;
-	char *pos, *end;
-	int res;
+	size_t len = 0;
 
-	if (!kay)
+	if (!kay || !buflen)
 		return 0;
 
-	pos = buf;
-	end = buf + buflen;
+	len += wpa_scnprintf(buf + len, buflen - len,
+			     "Cipher Suite: %s\tEncryption: %s\n",
+			     cipher_suite_tbl[kay->macsec_csindex].name,
+			     yes_no(kay->macsec_encrypt));
 
-	res = os_snprintf(pos, end - pos, "Cipher Suite: %s\tEncryption: %s\n",
-			  cipher_suite_tbl[kay->macsec_csindex].name,
-			  yes_no(kay->macsec_encrypt));
-	if (os_snprintf_error(buflen, res))
-		return end - pos;
-	pos += res;
+	len += wpa_scnprintf(buf + len, buflen - len,
+			     "Include SCI: %s\n",
+			     yes_no(kay->macsec_include_sci));
 
-	res = os_snprintf(pos, end - pos, "Include SCI: %s\n",
-			  yes_no(kay->macsec_include_sci));
-	if (os_snprintf_error(end - pos, res))
-		return end - pos;
-	pos += res;
-
-	res = os_snprintf(pos, end - pos, "Replay Protect: %s\tReplay Window: %u\n",
-			  yes_no(kay->macsec_replay_protect), kay->macsec_replay_window);
-	if (os_snprintf_error(end - pos, res))
-		return end - pos;
-	pos += res;
+	len += wpa_scnprintf(buf + len, buflen - len,
+			     "Replay Protect: %s\tReplay Window: %u\n",
+			     yes_no(kay->macsec_replay_protect), kay->macsec_replay_window);
 
 	/* The transmit SC and receive SCs are per-port SecY state shared by all
 	 * participants, so report them once for the KaY rather than per CA. */
 	if (kay->txsc) {
-		res = os_snprintf(pos, end - pos, "\tTXSC: %s\n",
-				  sci_txt(&kay->txsc->sci));
-		if (os_snprintf_error(end - pos, res))
-			return end - pos;
-		pos += res;
+		len += wpa_scnprintf(buf + len, buflen - len,
+				     "\tTXSC: %s\n",
+				     sci_txt(&kay->txsc->sci));
 
 		dl_list_for_each(txsa, &kay->txsc->sa_list,
 				 struct transmit_sa, list) {
-			res = os_snprintf(pos, end - pos,
-					  "\t\tAN: %u\tActive: %s\tPN: %" PRIu64 "\n",
-					  txsa->an, yes_no(txsa->in_use),
-					  txsa->next_pn);
-			if (os_snprintf_error(end - pos, res))
-				return end - pos;
-			pos += res;
+			if (len == buflen - 1)
+				return len;
+			len += wpa_scnprintf(buf + len, buflen - len,
+					     "\t\tAN: %u\tActive: %s\tPN: %" PRIu64 "\n",
+					     txsa->an, yes_no(txsa->in_use),
+					     txsa->next_pn);
 		}
 	}
 
 	dl_list_for_each(rxsc, &kay->rxsc_list, struct receive_sc,
 			 list) {
-		res = os_snprintf(pos, end - pos, "\tRXSC: %s\n",
-				  sci_txt(&rxsc->sci));
-		if (os_snprintf_error(end - pos, res))
-			return end - pos;
-		pos += res;
+		if (len == buflen - 1)
+			return len;
+		len += wpa_scnprintf(buf + len, buflen - len,
+				     "\tRXSC: %s\n",
+				     sci_txt(&rxsc->sci));
 
 		dl_list_for_each(rxsa, &rxsc->sa_list, struct receive_sa,
 				 list) {
-			res = os_snprintf(pos, end - pos,
-					  "\t\tAN: %u\tActive: %s\tPN: %" PRIu64 "\n",
-					  rxsa->an, yes_no(rxsa->in_use),
-					  rxsa->next_pn);
-			if (os_snprintf_error(end - pos, res))
-				return end - pos;
-			pos += res;
+			if (len == buflen - 1)
+				return len;
+			len += wpa_scnprintf(buf + len, buflen - len,
+					     "\t\tAN: %u\tActive: %s\tPN: %" PRIu64 "\n",
+					     rxsa->an, yes_no(rxsa->in_use),
+					     rxsa->next_pn);
 		}
 	}
 
-	return pos - buf;
+	return len;
 }
 
 
