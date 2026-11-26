@@ -20,8 +20,7 @@ variables:
 jobs:
 - job:
   displayName: "amd64"
-  pool:
-    vmImage: 'ubuntu-22.04'
+  pool: sonic-ubuntu-1c
 
   container:
     image: sonicdev-microsoft.azurecr.io:443/sonic-slave-bookworm:$(BUILD_BRANCH)
