@@ -28,9 +28,6 @@
 #define DEFAULT_ICV_LEN		16
 #define MAX_ICV_LEN		32  /* 32 bytes, 256 bits */
 
-#define MAX_MISSING_SAK_USE 10  /* Accept up to 10 inbound MKPDUs without
-				 * SAK-USE before dropping */
-
 #define PENDING_PN_EXHAUSTION  0x00000000C0000000ULL
 #define PENDING_XPN_EXHAUSTION 0xC000000000000000ULL
 #define MAX_TOLERANT_PACKET_LOSS 0x0000000040000000ULL
@@ -853,7 +850,6 @@ ieee802_1x_kay_create_peer(const u8 *mi, u32 mn)
 	peer->expire = time(NULL) + MKA_LIFE_TIME / 1000;
 	peer->sak_used = false;
 	peer->sak_txed = false;
-	peer->missing_sak_use_count = 0;
 
 	return peer;
 }
@@ -4218,47 +4214,15 @@ static int ieee802_1x_kay_decode_mkpdu(struct ieee802_1x_kay *kay,
 		return -1;
 	}
 
-	/* Detect missing parameter sets */
 	peer = ieee802_1x_kay_get_live_peer(participant,
 					    participant->current_peer_id.mi);
 	if (peer) {
-		/* MKPDU is from live peer */
-		if (!handled[MKA_SAK_USE]) {
-			/* Once a live peer starts sending SAK-USE, it should be
-			 * sent every time. */
-			if (peer->sak_used) {
-				wpa_printf(MSG_INFO,
-					   "KaY: Discarding Rx MKPDU: Live Peer stopped sending SAK-USE");
-				return -1;
-			}
-
-			/* Live peer is probably hung if it hasn't sent SAK-USE
-			 * after a reasonable number of MKPDUs. Drop the MKPDU,
-			 * which will eventually force an timeout. */
-			if (++peer->missing_sak_use_count >
-			    MAX_MISSING_SAK_USE) {
-				wpa_printf(MSG_INFO,
-					   "KaY: Discarding Rx MKPDU: Live Peer not sending SAK-USE");
-				return -1;
-			}
-
-			/* Update watchdog if we're in peer's live peer list with correct MN.
-			 * This handles the case where SAK-USE is temporarily missing during
-			 * session establishment. */
-			if (i_in_peerlist) {
-				wpa_printf(MSG_INFO, "KaY: Update watchdog timer, SAK-USE not set ");
-				peer->expire = time(NULL) + MKA_LIFE_TIME / 1000;
-			}
-		} else {
-			peer->missing_sak_use_count = 0;
-
-			/* Renew after parameter processing, but only if the peer
-			 * acknowledged this CA's recent MI/MN. */
-			if (i_in_peerlist) {
-				wpa_printf(MSG_INFO,
-					   "KaY: Update watchdog timer, SAK-USE set");
-				peer->expire = time(NULL) + MKA_LIFE_TIME / 1000;
-			}
+		/* Liveness depends on acknowledgment of this CA's recent MI/MN,
+		 * not on SAK Use presence or key readiness. Renew only after
+		 * parameter processing succeeds. */
+		if (i_in_peerlist) {
+			wpa_printf(MSG_DEBUG, "KaY: Update live peer watchdog");
+			peer->expire = time(NULL) + MKA_LIFE_TIME / 1000;
 		}
 	} else {
 		/* MKPDU is from new or potential peer */
