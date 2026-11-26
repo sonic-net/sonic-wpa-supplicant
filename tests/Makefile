@@ -3,7 +3,7 @@ ALL=test-base64 test-md4 test-milenage \
 	test-sha1 \
 	test-https test-https_server \
 	test-sha256 test-aes test-x509v3 test-list test-rc4 \
-	test-macsec_cp_wedge
+	test-macsec_cp_wedge test-macsec_status
 
 include ../src/build.rules
 
@@ -50,6 +50,12 @@ LLIBS += -lrt
 # stubbed deps, needs no extra libraries.
 test-macsec_cp_wedge: test-macsec_cp_wedge.c
 	$(CC) $(CFLAGS) -o $@ $<
+
+# Link the production status formatter and discard unrelated KaY functions.
+test-macsec_status: test-macsec_status.c ../src/pae/ieee802_1x_kay.c \
+		../src/utils/common.c ../src/pae/ieee802_1x_kay.h ../src/utils/common.h
+	$(CC) $(CFLAGS) -DCONFIG_CTRL_IFACE -ffunction-sections -fdata-sections \
+		$(LDFLAGS) -Wl,--gc-sections -o $@ $(filter %.c,$^)
 
 test-aes: $(call BUILDOBJ,test-aes.o) $(LIBS)
 	$(LDO) $(LDFLAGS) -o $@ $^ $(LLIBS)
